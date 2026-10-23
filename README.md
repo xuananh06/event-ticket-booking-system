@@ -1,23 +1,24 @@
 # Event Ticket Booking System
 
-A university Java web project for event ticket booking and seat reservation. The current application provides a runnable web foundation and a SQL Server schema for the booking domain.
+A Java web project for event ticket booking and seat reservation. The current application provides account registration, authentication, role-protected welcome pages, and a SQL Server schema for the booking domain.
 
 ## Capabilities
 
 Implemented:
 
-- A Servlet forwarding to a protected JSP with Vietnamese UTF-8 text, JSTL iteration, and escaped EL output.
+- Customer registration, login for three roles, and POST-only logout.
+- Bcrypt password hashing, session ID rotation, session-bound CSRF protection, and current account/role checks on protected requests.
+- English, responsive Bootstrap views with shared navigation, field errors, safe input retention, UTF-8, and escaped user content.
 - External database configuration and a bounded, read-only connectivity check at application startup.
 - A nine-table SQL Server schema with relational constraints, query indexes, demo accounts, events, and seat inventory.
-- Unit tests, an optional SQL Server integration test profile, and an isolated Tomcat HTTP smoke-test script.
+- Unit tests, real SQL Server schema/registration tests, and isolated Tomcat HTTP checks with independent cookie sessions.
 
 Planned capabilities, not yet available as application workflows:
 
-- Registration, login, and role-based access for customers, organizers, and administrators.
 - Event browsing, search, and administrative CRUD.
 - Timed seat reservations, booking management, simulated payments, cancellations, and dashboards.
 
-The database represents these domains, but the current web application exposes only the startup page.
+The database represents these planned domains. Welcome pages currently show account information, without event management, booking controls, or statistics.
 
 ## Requirements
 
@@ -37,7 +38,8 @@ After cloning the repository, run the examples from its root directory in PowerS
 | Jakarta Tags API / implementation | 3.0.2 / 3.0.1 | Packaged in WAR |
 | Microsoft JDBC Driver | 12.10.2.jre11 | Packaged in WAR |
 | JUnit Jupiter | 5.12.2 | Tests |
-| Favre bcrypt | 0.10.2 | Offline seed tooling and tests |
+| Favre bcrypt | 0.10.2 | Packaged in WAR; also used by seed tooling/tests |
+| Bootstrap CSS | 5.3.8 | Vendored under `assets/vendor`, with its MIT license header |
 
 Build plugin versions are pinned in `pom.xml`. Tomcat 10.1 implements Servlet 6.0, JSP 3.1, and EL 5.0; it does not supply JSTL. The JDBC `jre11` artifact supports Java 17. References: [Tomcat compatibility](https://tomcat.apache.org/migration-10.1.html), [Jakarta Tags](https://jakarta.ee/specifications/tags/3.0/), [Microsoft JDBC requirements](https://learn.microsoft.com/en-us/sql/connect/jdbc/system-requirements-for-the-jdbc-driver), [Microsoft JDBC release](https://github.com/microsoft/mssql-jdbc/releases/tag/v12.10.2), [bcrypt library](https://github.com/patrickfav/bcrypt), [JUnit](https://docs.junit.org/5.12.2/user-guide/).
 
@@ -64,14 +66,14 @@ Scripts are each a single T-SQL batch without `GO`, so JDBC can execute each com
 
 The schema has nine tables: `users`, `categories`, `venues`, `seats`, `events`, `bookings`, `event_seats`, `booking_items`, and `payments`. It includes:
 
-- `BIGINT IDENTITY` keys, Vietnamese `NVARCHAR`, `DECIMAL(18,2)` VND amounts, and UTC `DATETIME2(3)` fields.
+- `BIGINT IDENTITY` keys, Unicode `NVARCHAR`, `DECIMAL(18,2)` VND amounts, and UTC `DATETIME2(3)` fields.
 - Composite foreign keys for event/seat venue consistency, booking/item event consistency, and current inventory ownership.
 - Explicit inventory owner/expiry shapes, booking/payment timestamp shapes, nonnegative amounts, and a maximum five-minute booking deadline.
 - Unique email, physical layouts, per-event seats, booking codes, per-booking seat items, and per-booking payment keys.
 - A filtered unique index on successful payment history, retained after refund, and indexes for event searches, booking history, and inventory availability.
 - No cascading deletion of transaction history. Historical items may reference the same seat in different bookings.
 
-Email must equal SQL Server `LOWER(LTRIM(RTRIM(email)))`, without leading/trailing ASCII spaces. Its explicit collation is `Latin1_General_100_CI_AS_SC`: uniqueness is case insensitive and accent sensitive. Statuses use binary collation and reject trailing spaces. Constraints do not establish role/ownership rules, matching item totals and hold deadlines, minimum item counts, valid state transitions, or concurrency-safe allocation. The application workflows enforcing those rules are not implemented.
+Email must equal SQL Server `LOWER(LTRIM(RTRIM(email)))`, without leading/trailing ASCII spaces. Its explicit collation is `Latin1_General_100_CI_AS_SC`: uniqueness is case insensitive and accent sensitive. Public account forms accept ASCII email addresses and normalize them with locale-independent lowercase before database access. Statuses use binary collation and reject trailing spaces. Constraints do not establish booking ownership rules, matching item totals and hold deadlines, minimum item counts, valid state transitions, or concurrency-safe allocation. Those booking workflows are not implemented.
 
 ### Demo data and password format
 
@@ -83,9 +85,9 @@ Seed creates three accounts, two categories, one venue, eight physical seats, tw
 | `organizer@example.test` | ORGANIZER | `DemoOnly!ChangeMe` |
 | `customer@example.test` | CUSTOMER | `DemoOnly!ChangeMe` |
 
-These public accounts are demo database records. Database connection credentials are configured separately, and the application does not yet expose a login page.
+Use these public accounts on the sign-in page of a seeded test installation. They are application accounts, separate from database connection credentials. Keep demo accounts out of a public deployment. New seed installations use English demo labels; existing account names and other stored records are preserved when the application is updated.
 
-Seed password format: Favre bcrypt 0.10.2, `$2a$` format, cost **12**, independent cryptographic random salts, and 60-character encoded hashes. The schema enforces this format; changing algorithm or cost requires a schema migration. The offline helper accepts passwords of 8-72 UTF-8 bytes. Unit tests check the actual seed hashes with the correct and incorrect password.
+Seed and application password format: Favre bcrypt 0.10.2, `$2a$` format, cost **12**, independent cryptographic random salts, and 60-character encoded hashes. The schema enforces this format; changing algorithm or cost requires a schema migration. Registration and the offline helper accept passwords of 8-72 UTF-8 bytes, without trimming or truncation. Unit tests check the actual seed hashes with the correct and incorrect password.
 
 Generate replacement hashes offline, from the repository root:
 
@@ -97,7 +99,28 @@ java -cp "target/test-classes;target/classes;$testClasspath" com.eventbooking.to
 java -cp "target/test-classes;target/classes;$testClasspath" com.eventbooking.tools.DemoPasswordHashes --demo
 ```
 
-The interactive command reads without echo in a terminal. It does not accept passwords in command arguments. The helper and bcrypt are excluded from the WAR.
+The interactive command reads without echo in a terminal. It does not accept passwords in command arguments. The helper and test libraries are excluded from the WAR; bcrypt and its runtime dependency are included for authentication.
+
+## Account usage
+
+Open the application root, then select **Create account** or **Sign in**. Registration always creates an active CUSTOMER, regardless of submitted role or activation fields. Successful registration redirects to sign-in with a one-time success message; it does not automatically authenticate the account.
+
+Names support Unicode and allow 1-150 UTF-16 code units after stripping outer whitespace. Control characters are rejected. Email addresses allow at most 254 ASCII characters, including at most 64 before `@`. Password confirmation must match exactly. Validation retains only the name and email; password fields remain empty. Client validation supplements the server checks.
+
+| Route, relative to the deployed context | Behavior |
+| --- | --- |
+| `GET /` | Public welcome page |
+| `GET /register`, `POST /register` | Registration form and customer creation |
+| `GET /login`, `POST /login` | Sign-in form and authentication |
+| `POST /logout` | Invalidate the current session and return home; GET returns 405 |
+| `GET /customer/home` | CUSTOMER welcome page |
+| `GET /organizer/home` | ORGANIZER welcome page |
+| `GET /admin/home` | ADMIN welcome page |
+| `GET /health` | Generic, cached database startup snapshot as JSON |
+
+Guests requesting protected pages redirect to sign-in. A signed-in user requesting another role's page receives 403. The application rereads the current role and active status from the database rather than trusting a cached role. Disabled/deleted identities are invalidated. Unknown accounts, wrong passwords, and inactive accounts receive the same credential error. Database failures produce a generic 503 for database-dependent actions.
+
+Forms submit session-bound `_csrf` values in the request body, including registration, login, and logout. Keep cookies enabled. Missing, invalid, cross-session, or stale tokens return 403; reopen the form after expiry. Authentication changes the session ID and CSRF token. Successful actions use HTTP 303 redirects to fixed application destinations; credentials and tokens are never added to redirect URLs.
 
 ## External configuration
 
@@ -113,8 +136,12 @@ The interactive command reads without echo in a terminal. It does not accept pas
 | `EVENT_DB_PASSWORD` | Required for SQL authentication; absent for Windows authentication |
 | `EVENT_DB_ENCRYPT` | `true` |
 | `EVENT_DB_TRUST_SERVER_CERTIFICATE` | `false` |
+| `EVENT_SESSION_TIMEOUT_SECONDS` | `1200` (20 minutes); integer from 1 to 86400 |
+| `EVENT_SESSION_COOKIE_SECURE` | `false` for local HTTP; set `true` for HTTPS deployment |
 
-Boolean settings accept only `true` or `false`, ignoring case. No `EVENT_DB_*` variables means the smoke page can run without a database and shows `NOT_CONFIGURED`. Partial or malformed configuration fails application initialization with setting names only. A configured but unreachable database yields `UNAVAILABLE`; the foundation page remains accessible. `AVAILABLE` proves only the bounded startup `SELECT 1`, not schema readiness or continuing database health. Requests do not repeat the probe. Restart the application after changing configuration.
+Boolean settings accept only `true` or `false`, ignoring case. With no `EVENT_DB_*` variables, public pages and auth forms work without a database; valid registration/login submissions return 503. Partial or malformed configuration fails application initialization with setting names only. A configured but unreachable database leaves public pages accessible. `GET /health` always returns HTTP 200 with `NOT_CONFIGURED`, `AVAILABLE`, or `UNAVAILABLE`. `AVAILABLE` proves only the bounded startup `SELECT 1`, not schema readiness or continuing database health. Authentication operations use their own fresh connections and can fail independently of this snapshot. Restart the application after changing configuration.
+
+Sessions use cookie-only tracking, HttpOnly, and SameSite=Lax. Only the user ID is stored as authenticated identity, alongside CSRF state and an optional registration-success flag. The configured timeout is an inactivity timeout. Use HTTPS and `EVENT_SESSION_COOKIE_SECURE=true` for deployment; Secure cookies will not work over ordinary local HTTP. TLS termination and trusted proxy/connector configuration belong to the Tomcat/reverse-proxy setup; this application does not configure TLS or force HTTPS redirects.
 
 Example for SQL authentication in PowerShell:
 
@@ -142,7 +169,7 @@ Download `mssql-jdbc_auth.zip` from the [official driver release](https://github
 
 Use a trusted SQL Server certificate matching the configured hostname. For an isolated local test with a self-signed certificate, explicitly setting `EVENT_DB_TRUST_SERVER_CERTIFICATE=true` keeps encryption but bypasses certificate validation; keep the default `false` for normal deployment. The configured host and port must match the SQL Server instance's accessible TCP endpoint.
 
-`DataSourceFactory` uses typed driver setters and bounded login/socket timeouts. `SQLServerDataSource` is a connection factory, not a connection pool. The bootstrap injects dependencies through constructors. `DatabaseProbe` acquires a fresh connection and closes result sets, statements, and connections with try-with-resources; no JDBC connection is retained between requests.
+`DataSourceFactory` uses typed driver setters and bounded login/socket timeouts. `SQLServerDataSource` is a connection factory, not a connection pool. The bootstrap injects dependencies through constructors. The probe and DAO acquire fresh connections and close result sets, statements, and connections with try-with-resources; no JDBC connection is retained between requests. Authentication uses parameterized queries; application database permissions need user lookup and customer insertion. Integration tests require additional permissions for their test fixtures and schema checks.
 
 ## Build and deployment
 
@@ -154,7 +181,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 jar tf target/event-booking.war
 ```
 
-The WAR contains the application, protected JSP, JSTL API/implementation, and JDBC driver. Servlet/EL APIs, test libraries, native DLLs, credentials, and database scripts are excluded. Maven uses `--release 17` and UTF-8 for compilation.
+The WAR contains the application, protected JSP views, local Bootstrap/shared CSS, JSTL API/implementation, JDBC driver, and bcrypt runtime libraries. Servlet/EL APIs, test libraries/tools, native DLLs, credentials, and database scripts are excluded. Maven uses `--release 17` and UTF-8 for compilation.
 
 For a standalone Windows installation from the Tomcat ZIP distribution, set any database variables in the same shell, then deploy the WAR:
 
@@ -169,13 +196,20 @@ Copy-Item -LiteralPath target/event-booking.war -Destination (Join-Path $env:CAT
 
 Omit the `JAVA_OPTS` line for SQL password authentication or a page without database configuration. `JAVA_HOME` must point to JDK 17. Tomcat's startup scripts also read `CATALINA_BASE/bin/setenv.bat`; restrict access to any external configuration containing secrets. A Windows service uses its own account, environment, and JVM settings and does not run `catalina.bat` or inherit variables set in a separate PowerShell session.
 
-Open `http://localhost:8080/event-booking/` for the default connector/context. The root Servlet forwards to `WEB-INF/views/home.jsp`. It renders Vietnamese text, four JSTL list entries, EL values, and a generic startup connectivity status. Direct JSP access returns 404. Only the context root is mapped; other pages and workflows are absent. Requests and responses default to UTF-8 in `web.xml`; JSP output uses `c:out` escaping.
+Open `http://localhost:8080/event-booking/` for the default connector/context. Servlets forward to JSP views under `WEB-INF`; direct JSP access returns 404. Shared Bootstrap views work without external CDNs or JavaScript. Requests and responses use UTF-8; JSP output uses `c:out` escaping. The product interface is English, while user names and passwords retain their Unicode content.
 
 For automatic deployment into `webapps`, Tomcat derives the context path from the WAR filename, so `event-booking.war` maps to `/event-booking`. The `path` attribute in the bundled `META-INF/context.xml` does not override that naming rule. An IDE or explicit server deployment configuration may use another context path. See [Tomcat context naming](https://tomcat.apache.org/tomcat-10.1-doc/config/context.html#Naming).
 
 ### Isolated Tomcat smoke verification
 
-The Windows script requires readable Tomcat 10.1.44 binaries/configuration, JDK 17, and an already-built `target/event-booking.war`. It inherits database variables from the launching shell. Its parameters are `-TomcatHome` (required), `-JavaHome` (defaults to `JAVA_HOME`), `-JdbcNativeDirectory` (optional), and `-ExpectedDatabaseStatus` (`NOT_CONFIGURED`, `AVAILABLE`, or `UNAVAILABLE`; default `NOT_CONFIGURED`).
+The Windows script requires readable Tomcat 10.1.44 binaries/configuration, JDK 17, and an already-built `target/event-booking.war`. It inherits database variables from the launching shell. Parameters:
+
+- `-TomcatHome`: required Tomcat installation directory.
+- `-JavaHome`: defaults to `JAVA_HOME`.
+- `-JdbcNativeDirectory`: optional directory containing the matching native JDBC library.
+- `-ExpectedDatabaseStatus`: `NOT_CONFIGURED` (default), `AVAILABLE`, or `UNAVAILABLE`.
+- `-ContextName`: WAR deployment name, default `event-booking`; letters, digits, underscores, and hyphens are accepted, starting with a letter or digit, up to 50 characters. The reserved root-context name `ROOT` is not supported by this script.
+- `-AuthenticationTests`: additionally run the Maven `http-it` profile against this disposable server. Requires Maven on PATH. With `AVAILABLE`, also requires seeded test accounts, database access, and `EVENT_TEST_DB_CONFIRM` matching `EVENT_DB_NAME`.
 
 #### PowerShell execution policy
 
@@ -191,22 +225,23 @@ Without database configuration, clear only the application database variables in
 
 ```powershell
 Get-ChildItem Env:EVENT_DB_* | ForEach-Object { Remove-Item -LiteralPath ('Env:' + $_.Name) }
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Test-Tomcat.ps1 -TomcatHome 'C:\tools\apache-tomcat-10.1.44' -JavaHome 'C:\Program Files\Java\jdk-17' -ExpectedDatabaseStatus NOT_CONFIGURED
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Test-Tomcat.ps1 -TomcatHome 'C:\tools\apache-tomcat-10.1.44' -JavaHome 'C:\Program Files\Java\jdk-17' -ExpectedDatabaseStatus NOT_CONFIGURED -AuthenticationTests
 ```
 
 With the Windows-authentication configuration above, an accessible database, and the matching native JDBC DLL:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Test-Tomcat.ps1 -TomcatHome 'C:\tools\apache-tomcat-10.1.44' -JavaHome 'C:\Program Files\Java\jdk-17' -JdbcNativeDirectory 'C:\tools\mssql-jdbc-auth\x64' -ExpectedDatabaseStatus AVAILABLE
+$env:EVENT_TEST_DB_CONFIRM = $env:EVENT_DB_NAME
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Test-Tomcat.ps1 -TomcatHome 'C:\tools\apache-tomcat-10.1.44' -JavaHome 'C:\Program Files\Java\jdk-17' -JdbcNativeDirectory 'C:\tools\mssql-jdbc-auth\x64' -ExpectedDatabaseStatus AVAILABLE -ContextName campus-auth -AuthenticationTests
 ```
 
-If you ran the first example, reapply the database environment configuration before running the second. Use `-ExpectedDatabaseStatus UNAVAILABLE` with deliberately unreachable local settings to check the generic connection-failure page. For SQL password authentication, omit `-JdbcNativeDirectory` and set the SQL username/password environment variables instead.
+If you ran the first example, reapply the database environment configuration before running the second. Use `-ExpectedDatabaseStatus UNAVAILABLE` with deliberately unreachable local settings to check the generic startup status and authentication failure behavior. For SQL password authentication, omit `-JdbcNativeDirectory` and set the SQL username/password environment variables instead. Omit `-AuthenticationTests` to run only the basic smoke assertions.
 
-The script uses the supplied Tomcat binaries, validates version and Java runtime, creates a separate base under `target`, listens on an ephemeral loopback port, deploys the WAR, and checks HTTP 200, UTF-8, JSTL/EL, the expected database status, protected JSP 404, unknown route 404, and POST 405. It stops only its disposable JVM and retains response/log evidence. It does not start or alter an installed Tomcat service. This is an HTTP deployment check, not a browser visual review.
+The script uses the supplied Tomcat binaries, validates version and Java runtime, creates a separate base under `target`, listens on an ephemeral loopback port, deploys the WAR, and checks HTTP 200, UTF-8, JSTL/EL, local assets, the expected startup snapshot, protected JSP 404, unknown route 404, and root POST 405. It stops only its disposable JVM and retains response/log evidence. It does not start or alter an installed Tomcat service. With `-AuthenticationTests`, only this disposable JVM uses a five-second session timeout and non-Secure cookies for HTTP/expiry checks; the launching environment is restored. These are HTTP deployment checks; inspect browser rendering separately.
 
 ## Tests
 
-`mvn -B clean verify` runs database-independent unit tests, validates configuration and JDBC resource cleanup, verifies seed passwords, and builds the WAR. It does not connect to SQL Server or start Tomcat.
+`mvn -B clean verify` runs database-independent unit tests for configuration, JDBC resource cleanup, validation, hashing, generic errors, CSRF, session settings, and role filters, verifies seed passwords, and builds the WAR. It does not connect to SQL Server or start Tomcat.
 
 Run database integration tests explicitly against a dedicated SQL Server 2022 database already initialized with schema and seed:
 
@@ -223,9 +258,17 @@ $env:EVENT_TEST_DB_CONFIRM = $env:EVENT_DB_NAME
 mvn -B clean verify -Psqlserver-it '-DargLine=-Djava.library.path=C:\tools\mssql-jdbc-auth\x64'
 ```
 
-The profile requires matching `EVENT_TEST_DB_CONFIRM` and `EVENT_DB_NAME`, complete database settings, connectivity, and SQL Server major version 16. Missing prerequisites cause failure rather than skipped tests. Use a dedicated test database with the original seed contents and sample events still in the future. Fixture transactions roll back their rows, while SQL Server identity counters may advance. The suite tests JDBC/Unicode, trusted constraints, both venue foreign keys, booking/item/current-owner event matching, inventory shapes, historical seat references, payment key scope, success uniqueness after refund, normalized email, amount/time checks, deletion protection, and script rerun refusal. These are schema checks; they do not exercise booking or payment application workflows.
+The profile requires matching `EVENT_TEST_DB_CONFIRM` and `EVENT_DB_NAME`, complete database settings, connectivity, and SQL Server major version 16. Missing prerequisites cause failure rather than skipped tests. Use a dedicated test database with the original seed contents and sample events still in the future. Schema fixture transactions roll back. Registration tests commit unique fixture accounts to exercise real DAO connections and competing inserts, then delete only their own exact email addresses in cleanup. Identity counters may advance. Existing users and business records are not updated or reseeded.
 
-Surefire reports are in `target/surefire-reports`; Failsafe reports are in `target/failsafe-reports`. Tomcat smoke logs and the captured response are under `target/tomcat-smoke-*/logs`. `mvn clean` removes `target`, including those artifacts and any native library extracted there. A successful build alone does not establish deployment or database correctness. Authentication, booking concurrency, payment workflows, performance, and browser visual rendering are outside the current test coverage.
+Schema checks cover JDBC/Unicode, trusted constraints, both venue foreign keys, booking/item/current-owner event matching, inventory shapes, historical seat references, payment key scope, success uniqueness after refund, normalized email, amount/time checks, deletion protection, and script rerun refusal. Registration checks cover persistence, compatible stored hashes, normalization, duplicate mapping, and one winner from competing inserts. Schema fixtures do not implement booking/payment application workflows.
+
+The script's `-AuthenticationTests` switch runs one JUnit HTTP scenario containing direct requests with independent cookie sessions. With an available seeded database it checks customer registration, submitted-privilege rejection, validation/escaping, three seeded logins, all nine role-route pairs, missing/wrong/cross-session/stale CSRF, ID rotation and replay, logout, inactive login, changed roles/active status, and actual inactivity expiry. Without an available database it instead checks public availability and safe 503 responses. Account changes affect only unique test-owned fixtures; seeded accounts are used for login only. An abruptly terminated test may leave an account whose email starts with `auth-` and a run-specific UUID; inspect such records before any manual cleanup.
+
+Surefire reports are in `target/surefire-reports`; Failsafe reports are in `target/failsafe-reports`. Each HTTP invocation replaces its scenario report. Tomcat smoke logs and the captured anonymous response are under `target/tomcat-smoke-*/logs`; auth form bodies, passwords, cookies, and tokens are not written as evidence. `mvn clean` removes `target`, including those artifacts and any native library extracted there. Stop any manually launched JVM using that directory before cleaning on Windows. A successful build alone does not establish deployment or database correctness.
+
+## Technical limitations
+
+Event management, seat allocation, booking/payment workflows, and dashboards are not available. Authentication currently has no email verification, password recovery/change flow, MFA, rate limiting, or account administration interface. Bootstrap CSS is included locally; no JavaScript is required for the implemented forms. HTTPS/proxy setup, production database permission provisioning, connection pooling, load testing, and broader browser/accessibility testing require deployment-specific work.
 
 ## Troubleshooting
 
@@ -235,7 +278,12 @@ Surefire reports are in `target/surefire-reports`; Failsafe reports are in `targ
 | The script reports a missing WAR or wrong Tomcat/Java version | The script started but its prerequisites failed. Build the WAR and correct `-TomcatHome`/`-JavaHome`. |
 | `NOT_CONFIGURED` when a database was expected | The launching process has no `EVENT_DB_*` variables. Set them in the same shell or service environment; copying `.env.example` alone does not configure the application. |
 | `UNAVAILABLE` | The application started but its database probe failed. Check host/TCP port, database existence, account permissions, authentication mode, certificate trust, and the native DLL/JVM architecture for Windows authentication. The status intentionally omits driver details. |
+| Sign-in/registration returns 503 although `/health` says `AVAILABLE` | The snapshot only checked connectivity at startup. Check current database access, the initialized schema, and permissions; retry after the service is restored. |
+| A form returns 403 | Reopen it to obtain a token for the current session. Keep cookies enabled; do not reuse a pre-login token or put form values in a query string. |
+| Sign-in repeatedly returns to the form on local HTTP | Check whether Secure cookies are enabled. Use `EVENT_SESSION_COOKIE_SECURE=false` for the isolated HTTP test and `true` with HTTPS deployment. |
+| A protected page returns 403 or redirects to sign-in | Check the account's current role/active status and session expiry. Navigation links do not grant access. |
 | Application initialization fails after adding database settings | Partial settings, invalid booleans/port, or mixed authentication modes are rejected. Check required variable names and remove SQL username/password variables when using Windows authentication. |
 | HTTP deployment check fails after the script starts | Inspect `target/tomcat-smoke-*/logs` for deployment/JSP/startup errors and compare the expected database status. Changing execution policy does not fix these failures. For manual deployment, inspect `CATALINA_BASE/logs` and confirm the context path. |
 | Schema or seed rerun is refused | This is the scripts' data-preservation guard. Use an explicitly selected empty database for initial setup; rerunning is not a migration or reset operation. |
 | Integration tests fail with modified or old demo data | The suite expects the original seed contents and future sample events. Initialize a separate empty test database rather than refreshing existing data automatically. |
+| `mvn clean` cannot delete a Tomcat log under `target` | Stop the manually launched test JVM holding the file, then rerun clean. The smoke script normally stops its own process in `finally`. |
