@@ -50,12 +50,11 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-        <!-- Seed tooling only; no authentication workflow is included in P1. -->
+        <!-- Authentication and the offline seed helper share the same bcrypt format. -->
         <dependency>
             <groupId>at.favre.lib</groupId>
             <artifactId>bcrypt</artifactId>
             <version>0.10.2</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
