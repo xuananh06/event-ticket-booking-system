@@ -132,17 +132,30 @@ class SqlServerFoundationIT {
         try (Statement statement = connection.createStatement();
              ResultSet rows = statement.executeQuery("SELECT full_name,password_hash FROM dbo.users WHERE email=N'customer@example.test'")) {
             assertTrue(rows.next());
-            assertEquals("Nguyễn Minh Anh", rows.getString(1));
+            // Existing populated databases retain their original demo/user display names.
+            assertFalse(rows.getString(1).isBlank());
             assertTrue(BCrypt.verifyer().verify("DemoOnly!ChangeMe".toCharArray(), rows.getString(2)).verified);
         }
         assertEquals(8, scalar("SELECT COUNT(*) FROM dbo.seats"));
         assertEquals(16, scalar("SELECT COUNT(*) FROM dbo.event_seats"));
         assertEquals(2, scalar("SELECT COUNT(*) FROM dbo.events WHERE starts_at>SYSUTCDATETIME()"));
+        // Dedicated Unicode fixture; rolled back rather than translating any existing row.
+        String unicodeName = "Nguyễn Minh Anh 🎟";
+        String fixtureEmail = "unicode-" + UUID.randomUUID() + "@example.test";
+        try (PreparedStatement insert = connection.prepareStatement("INSERT dbo.users(email,full_name,password_hash,role) SELECT ?,?,password_hash,'CUSTOMER' FROM dbo.users WHERE email=N'customer@example.test'")) {
+            insert.setNString(1, fixtureEmail); insert.setNString(2, unicodeName); insert.executeUpdate();
+        }
+        try (PreparedStatement select = connection.prepareStatement("SELECT full_name FROM dbo.users WHERE email=?")) {
+            select.setNString(1, fixtureEmail);
+            try (ResultSet rows = select.executeQuery()) { assertTrue(rows.next()); assertEquals(unicodeName, rows.getNString(1)); }
+        }
     }
 
     @Test
-    void schemaContainsNineTablesAndTrustedConstraintsWithoutCascades() throws Exception {
-        assertEquals(9, scalar("SELECT COUNT(*) FROM sys.tables WHERE schema_id=SCHEMA_ID(N'dbo')"));
+    void schemaContainsAllNineApplicationTablesAndTrustedConstraintsWithoutCascades() throws Exception {
+        // SSMS may add sysdiagrams; require every application table without owning that metadata.
+        assertEquals(9, scalar("SELECT COUNT(*) FROM sys.tables WHERE schema_id=SCHEMA_ID(N'dbo') "
+                + "AND name IN ('users','categories','venues','seats','events','bookings','event_seats','booking_items','payments')"));
         assertEquals(0, scalar("SELECT COUNT(*) FROM sys.foreign_keys WHERE is_disabled=1 OR is_not_trusted=1 OR delete_referential_action<>0"));
         assertEquals(0, scalar("SELECT COUNT(*) FROM sys.check_constraints WHERE is_disabled=1 OR is_not_trusted=1"));
     }
