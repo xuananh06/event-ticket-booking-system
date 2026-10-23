@@ -1,0 +1,32 @@
+:root { --campus-blue: #234dc4; --campus-ink: #17223c; --campus-muted: #667085; }
+body { color: var(--campus-ink); background: #f7f9fd; min-height: 100vh; display: flex; flex-direction: column; }
+a { color: var(--campus-blue); text-underline-offset: .2em; }
+.site-header { background: #fff; border-bottom: 1px solid #e8edf6; }
+.brand { display: inline-flex; align-items: center; gap: .65rem; color: var(--campus-ink); text-decoration: none; font-size: 1.15rem; font-weight: 750; }
+.brand-mark { display: grid; place-items: center; width: 2rem; height: 2rem; background: var(--campus-blue); color: #fff; border-radius: .65rem; }
+.page-content { flex: 1; padding-top: 3.5rem; padding-bottom: 4rem; }
+.hero { min-height: 65vh; }
+.hero h1 { max-width: 12em; letter-spacing: -.04em; line-height: 1.12; }
+.eyebrow, .section-number { font-size: .72rem; letter-spacing: .14em; font-weight: 750; color: var(--campus-blue); }
+.feature-panel { border-radius: 1.5rem; background: #eaf0ff; border: 1px solid #dce5ff; }
+.capability-list { padding: 0; margin: 0; list-style: none; }
+.capability-list li { display: flex; gap: .75rem; padding: .85rem 0; border-top: 1px solid #d4def5; font-weight: 500; }
+.capability-list li::before { content: '+'; color: var(--campus-blue); font-weight: 800; }
+.auth-card, .account-card { background: #fff; border: 1px solid #e2e8f2; border-radius: 1.25rem; padding: 2.5rem; box-shadow: 0 14px 45px #1b36610a; }
+.auth-card { max-width: 30rem; }
+.account-card { max-width: 54rem; margin: 1.5rem auto; }
+.account-card h1 { overflow-wrap: anywhere; }
+.form-label { font-size: .9rem; font-weight: 600; }
+.form-control { padding: .7rem .85rem; border-color: #cbd5e5; }
+.form-control:focus { border-color: #7b9aee; box-shadow: 0 0 0 .2rem #234dc422; }
+.field-error { color: #ad2030; font-size: .85rem; margin-top: .35rem; }
+.field-error:empty { display: none; }
+.btn { border-radius: .65rem; padding: .65rem 1.2rem; font-weight: 600; }
+.btn-sm { padding: .45rem .9rem; }
+.btn-primary { --bs-btn-bg: var(--campus-blue); --bs-btn-border-color: var(--campus-blue); --bs-btn-hover-bg: #193b9b; --bs-btn-hover-border-color: #193b9b; }
+.account-details dt, .account-details dd { padding-top: .65rem; padding-bottom: .65rem; overflow-wrap: anywhere; }
+.role-badge { display: inline-block; color: #204297; background: #eaf0ff; border-radius: 1rem; padding: .2rem .75rem; font-size: .85rem; font-weight: 600; }
+.site-footer { border-top: 1px solid #e8edf6; color: var(--campus-muted); font-size: .85rem; }
+.skip-link { position: absolute; left: -10000px; background: #fff; padding: .7rem; z-index: 10; }
+.skip-link:focus { left: 1rem; top: .5rem; }
+@media (max-width: 575px) { .page-content { padding-top: 2rem; } .auth-card, .account-card { padding: 1.5rem; } .hero { min-height: auto; } }

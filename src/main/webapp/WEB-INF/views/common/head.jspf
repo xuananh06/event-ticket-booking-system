@@ -1,0 +1,7 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><c:out value="${empty pageTitle ? 'Event Ticket Booking' : pageTitle}"/> | Campus Events</title>
+<c:url var="bootstrapUrl" value="/assets/vendor/bootstrap-5.3.8.min.css"/>
+<c:url var="stylesUrl" value="/assets/css/app.css"/>
+<link rel="stylesheet" href="<c:out value='${bootstrapUrl}'/>">
+<link rel="stylesheet" href="<c:out value='${stylesUrl}'/>">

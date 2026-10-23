@@ -1,0 +1,26 @@
+<c:url var="publicHomeUrl" value="/"/>
+<c:url var="loginUrl" value="/login"/>
+<c:url var="registerUrl" value="/register"/>
+<c:url var="logoutUrl" value="/logout"/>
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="site-header">
+    <nav class="container d-flex flex-wrap align-items-center justify-content-between gap-3 py-3" aria-label="Main navigation">
+        <a class="brand" href="<c:out value='${publicHomeUrl}'/>"><span class="brand-mark" aria-hidden="true">C</span>Campus Events</a>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <c:choose>
+                <c:when test="${not empty currentUser}">
+                    <c:url var="accountHomeUrl" value="${currentUser.role.homePath}"/>
+                    <a class="nav-link" href="<c:out value='${accountHomeUrl}'/>">Your account</a>
+                    <form method="post" action="<c:out value='${logoutUrl}'/>" class="m-0">
+                        <input type="hidden" name="_csrf" value="<c:out value='${csrfToken}'/>">
+                        <button class="btn btn-outline-dark btn-sm" type="submit">Sign out</button>
+                    </form>
+                </c:when>
+                <c:otherwise>
+                    <a class="nav-link" href="<c:out value='${loginUrl}'/>">Sign in</a>
+                    <a class="btn btn-primary btn-sm" href="<c:out value='${registerUrl}'/>">Create account</a>
+                </c:otherwise>
+            </c:choose>
+        </div>
+    </nav>
+</header>

@@ -8,9 +8,16 @@
         <listener-class>com.eventbooking.config.ApplicationBootstrap</listener-class>
     </listener>
     <session-config>
+        <session-timeout>20</session-timeout>
         <cookie-config><http-only>true</http-only></cookie-config>
         <tracking-mode>COOKIE</tracking-mode>
     </session-config>
     <request-character-encoding>UTF-8</request-character-encoding>
     <response-character-encoding>UTF-8</response-character-encoding>
+    <error-page><error-code>403</error-code><location>/WEB-INF/views/error.jsp</location></error-page>
+    <error-page><error-code>404</error-code><location>/WEB-INF/views/error.jsp</location></error-page>
+    <error-page><error-code>405</error-code><location>/WEB-INF/views/error.jsp</location></error-page>
+    <error-page><error-code>500</error-code><location>/WEB-INF/views/error.jsp</location></error-page>
+    <error-page><error-code>503</error-code><location>/WEB-INF/views/error.jsp</location></error-page>
+    <error-page><exception-type>java.lang.Throwable</exception-type><location>/WEB-INF/views/error.jsp</location></error-page>
 </web-app>

@@ -1,0 +1,9 @@
+<c:if test="${not empty successMessage}">
+    <div class="alert alert-success" role="status"><c:out value="${successMessage}"/></div>
+</c:if>
+<c:if test="${not empty errorMessage}">
+    <div class="alert alert-danger" role="alert"><c:out value="${errorMessage}"/></div>
+</c:if>
+<c:if test="${not empty errors}">
+    <div class="alert alert-danger" role="alert">Please check the highlighted fields and try again.</div>
+</c:if>
