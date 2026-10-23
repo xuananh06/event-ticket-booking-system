@@ -25,7 +25,7 @@ import java.util.Optional;
 import java.util.EnumSet;
 import javax.sql.DataSource;
 
-public final class ApplicationBootstrap implements ServletContextListener {
+public final class ApplicationInitializer implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent event) {
         ServletContext context = event.getServletContext();
