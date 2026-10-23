@@ -5,6 +5,7 @@
 .idea/
 *.iml
 out/
+.smarttomcat
 
 # NetBeans local configurations
 nbactions.xml
