@@ -1,6 +1,6 @@
 # Event Ticket Booking System
 
-A Java web project for event ticket booking and seat reservation. The current application provides account registration, authentication, role-protected welcome pages, and a SQL Server schema for the booking domain.
+A Java web project for event ticket booking and seat reservation. The application provides account security, reference/account administration, organizer-owned draft events, and public event browsing. The SQL Server schema also supports the planned booking domain.
 
 ## Capabilities
 
@@ -9,16 +9,19 @@ Implemented:
 - Customer registration, login for three roles, and POST-only logout.
 - Bcrypt password hashing, session ID rotation, session-bound CSRF protection, and current account/role checks on protected requests.
 - English, responsive Bootstrap views with shared navigation, field errors, safe input retention, UTF-8, and escaped user content.
+- Admin category, venue, physical-seat and account management, active-state controls and guarded deletion.
+- Organizer-owned draft event CRUD and read-only access to other owned event statuses, using Asia/Bangkok forms and UTC storage.
+- Public upcoming published-event lists/details, literal title search, combined category/venue/date filters and pagination.
 - External database configuration and a bounded, read-only connectivity check at application startup.
 - A nine-table SQL Server schema with relational constraints, query indexes, demo accounts, events, and seat inventory.
 - Unit tests, real SQL Server schema/registration tests, and isolated Tomcat HTTP checks with independent cookie sessions.
 
 Planned capabilities, not yet available as application workflows:
 
-- Event browsing, search, and administrative CRUD.
+- Event seat inventory generation, pricing, publication workflows and seat availability.
 - Timed seat reservations, booking management, simulated payments, cancellations, and dashboards.
 
-The database represents these planned domains. Welcome pages currently show account information, without event management, booking controls, or statistics.
+Role welcome pages retain account information and navigation to the implemented management screens. Booking controls and statistics are not available.
 
 ## Requirements
 
@@ -117,10 +120,29 @@ Names support Unicode and allow 1-150 UTF-16 code units after stripping outer wh
 | `GET /organizer/home` | ORGANIZER welcome page |
 | `GET /admin/home` | ADMIN welcome page |
 | `GET /health` | Generic, cached database startup snapshot as JSON |
+| `GET /admin/categories`, `/admin/venues`, `/admin/seats` | Paged Admin reference lists and create/edit forms; optional edit `id` |
+| `POST /admin/categories`, `/admin/venues`, `/admin/seats` | Explicit `save`, `status` or `delete` actions |
+| `GET /admin/users`, `POST /admin/users` | Admin account list/search/forms and explicit management actions |
+| `GET /organizer/events`, `POST /organizer/events` | Organizer-owned list/details/forms and draft save/delete actions |
+| `GET /events`, `GET /events/detail?id=...` | Public eligible-event list/details |
 
 Guests requesting protected pages redirect to sign-in. A signed-in user requesting another role's page receives 403. The application rereads the current role and active status from the database rather than trusting a cached role. Disabled/deleted identities are invalidated. Unknown accounts, wrong passwords, and inactive accounts receive the same credential error. Database failures produce a generic 503 for database-dependent actions.
 
 Forms submit session-bound `_csrf` values in the request body, including registration, login, and logout. Keep cookies enabled. Missing, invalid, cross-session, or stale tokens return 403; reopen the form after expiry. Authentication changes the session ID and CSRF token. Successful actions use HTTP 303 redirects to fixed application destinations; credentials and tokens are never added to redirect URLs.
+
+## Management and event browsing
+
+Admin navigation provides Categories, Venues, Seats and Accounts. Lists include inactive records and accept page/state filters. Categories have unique names; seats have a unique venue/row/number combination. Deletion removes only unreferenced records. Database references produce a controlled 409 conflict, preserving related records/history. A category or venue required by an upcoming published event cannot be deactivated. Seats used by event inventory cannot be moved, relabeled, deactivated or deleted through management.
+
+Account creation accepts a valid role, initial state and confirmed password. Profile/role/state edits preserve the hash. Administrators cannot disable, delete or demote themselves or remove the last active administrator. Event owners must retain ORGANIZER and booking owners must retain CUSTOMER. Referenced users may be disabled when permitted, with history retained. Every mutation revalidates the actor inside its transaction.
+
+Organizers can view only their own management records and mutate only DRAFT events. New events are always DRAFT; submitted owner/status fields cannot publish or transfer them. Drafts with inventory/bookings cannot be deleted or moved to another venue. New assignments require active categories/venues; unchanged inactive references can remain on an existing draft and their labels remain visible. Descriptions are escaped plain text with preserved line breaks and a 10,000 UTF-16-unit limit. Titles allow up to 200 units. Drafts must start in the future and end after they start. Forms/display use Asia/Bangkok; JDBC stores UTC DATETIME2 with millisecond precision. Publishing, inventory generation and pricing actions are not implemented.
+
+Anyone can browse `/events`. SQL visibility requires PUBLISHED, a start strictly after database UTC time, and an active ORGANIZER/category/venue. Draft/past/closed/cancelled/inactive records and missing events share the public 404 detail response. Management ownership checks apply independently.
+
+Event filters are `q` (literal title text, at most 100 characters), `category`, `venue`, inclusive local `from`/`to` dates, `page` and `size`. Default size is 10, maximum 50; pages are positive and capped at 1,000,000. Ordering uses start time and ID. Count/list use the same captured database time and predicates. Empty or beyond-last pages show a clear empty state. Suggestions include up to 50 reference records; ID fields accept valid identifiers beyond those suggestions. Pagination retains encoded filters under the actual deployment context.
+
+Mutations submit `action`, fields and CSRF in the POST body without action query strings. GET can load a form but never saves, deletes or changes active state. Validation returns 400, role failures 403, missing/not-owned records 404, integrity/business conflicts 409 and unavailable services 503. Management writes use short SERIALIZABLE transactions and a transaction-owned SQL Server application lock. This conservative serialization favors correctness for this project over high write throughput.
 
 ## External configuration
 
@@ -139,9 +161,9 @@ Forms submit session-bound `_csrf` values in the request body, including registr
 | `EVENT_SESSION_TIMEOUT_SECONDS` | `1200` (20 minutes); integer from 1 to 86400 |
 | `EVENT_SESSION_COOKIE_SECURE` | `false` for local HTTP; set `true` for HTTPS deployment |
 
-Boolean settings accept only `true` or `false`, ignoring case. With no `EVENT_DB_*` variables, public pages and auth forms work without a database; valid registration/login submissions return 503. Partial or malformed configuration fails application initialization with setting names only. A configured but unreachable database leaves public pages accessible. `GET /health` always returns HTTP 200 with `NOT_CONFIGURED`, `AVAILABLE`, or `UNAVAILABLE`. `AVAILABLE` proves only the bounded startup `SELECT 1`, not schema readiness or continuing database health. Authentication operations use their own fresh connections and can fail independently of this snapshot. Restart the application after changing configuration.
+Boolean settings accept only `true` or `false`, ignoring case. With no `EVENT_DB_*` variables, home/health/assets and auth forms remain usable. Database-dependent authentication, catalog and management operations fail safely; valid auth submissions and catalog requests return generic 503 responses. Partial or malformed configuration fails initialization with setting names only. `GET /health` returns HTTP 200 with the cached `NOT_CONFIGURED`, `AVAILABLE` or `UNAVAILABLE` startup snapshot. `AVAILABLE` proves only a bounded startup `SELECT 1`, not schema readiness or continuing health. Use-case connections can fail independently. Restart after changing configuration.
 
-Sessions use cookie-only tracking, HttpOnly, and SameSite=Lax. Only the user ID is stored as authenticated identity, alongside CSRF state and an optional registration-success flag. The configured timeout is an inactivity timeout. Use HTTPS and `EVENT_SESSION_COOKIE_SECURE=true` for deployment; Secure cookies will not work over ordinary local HTTP. TLS termination and trusted proxy/connector configuration belong to the Tomcat/reverse-proxy setup; this application does not configure TLS or force HTTPS redirects.
+Sessions use cookie-only tracking, HttpOnly, and SameSite=Lax. Only the user ID is stored as authenticated identity, alongside CSRF state and optional UI success messages. The configured timeout is an inactivity timeout. Use HTTPS and `EVENT_SESSION_COOKIE_SECURE=true` for deployment; Secure cookies will not work over ordinary local HTTP. TLS termination and trusted proxy/connector configuration belong to the Tomcat/reverse-proxy setup; this application does not configure TLS or force HTTPS redirects.
 
 Example for SQL authentication in PowerShell:
 
@@ -169,7 +191,7 @@ Download `mssql-jdbc_auth.zip` from the [official driver release](https://github
 
 Use a trusted SQL Server certificate matching the configured hostname. For an isolated local test with a self-signed certificate, explicitly setting `EVENT_DB_TRUST_SERVER_CERTIFICATE=true` keeps encryption but bypasses certificate validation; keep the default `false` for normal deployment. The configured host and port must match the SQL Server instance's accessible TCP endpoint.
 
-`DataSourceFactory` uses typed driver setters and bounded login/socket timeouts. `SQLServerDataSource` is a connection factory, not a connection pool. The bootstrap injects dependencies through constructors. The probe and DAO acquire fresh connections and close result sets, statements, and connections with try-with-resources; no JDBC connection is retained between requests. Authentication uses parameterized queries; application database permissions need user lookup and customer insertion. Integration tests require additional permissions for their test fixtures and schema checks.
+`DataSourceFactory` uses typed driver setters and bounded login/socket timeouts. `SQLServerDataSource` is a connection factory, not a connection pool. The bootstrap injects dependencies through constructors. The probe and DAO acquire fresh connections and close result sets, statements, and connections with try-with-resources; no JDBC connection is retained between requests. Authentication uses parameterized queries; application permissions need SELECT and the relevant INSERT/UPDATE/DELETE access for implemented management, plus permission to request the database application lock. Application code does not require schema creation permissions. Integration tests require additional permissions for their test fixtures and schema checks.
 
 ## Build and deployment
 
@@ -209,7 +231,7 @@ The Windows script requires readable Tomcat 10.1.44 binaries/configuration, JDK 
 - `-JdbcNativeDirectory`: optional directory containing the matching native JDBC library.
 - `-ExpectedDatabaseStatus`: `NOT_CONFIGURED` (default), `AVAILABLE`, or `UNAVAILABLE`.
 - `-ContextName`: WAR deployment name, default `event-booking`; letters, digits, underscores, and hyphens are accepted, starting with a letter or digit, up to 50 characters. The reserved root-context name `ROOT` is not supported by this script.
-- `-AuthenticationTests`: additionally run the Maven `http-it` profile against this disposable server. Requires Maven on PATH. With `AVAILABLE`, also requires seeded test accounts, database access, and `EVENT_TEST_DB_CONFIRM` matching `EVENT_DB_NAME`.
+- `-AuthenticationTests`: additionally run both authentication and management/catalog JUnit HTTP scenarios through Maven `http-it`. Requires Maven on PATH. With `AVAILABLE`, also requires seeded accounts, fixture-write database access and matching `EVENT_TEST_DB_CONFIRM` / `EVENT_DB_NAME`.
 
 #### PowerShell execution policy
 
@@ -258,17 +280,17 @@ $env:EVENT_TEST_DB_CONFIRM = $env:EVENT_DB_NAME
 mvn -B clean verify -Psqlserver-it '-DargLine=-Djava.library.path=C:\tools\mssql-jdbc-auth\x64'
 ```
 
-The profile requires matching `EVENT_TEST_DB_CONFIRM` and `EVENT_DB_NAME`, complete database settings, connectivity, and SQL Server major version 16. Missing prerequisites cause failure rather than skipped tests. Use a dedicated test database with the original seed contents and sample events still in the future. Schema fixture transactions roll back. Registration tests commit unique fixture accounts to exercise real DAO connections and competing inserts, then delete only their own exact email addresses in cleanup. Identity counters may advance. Existing users and business records are not updated or reseeded.
+The profile requires matching `EVENT_TEST_DB_CONFIRM` and `EVENT_DB_NAME`, complete settings, connectivity and SQL Server major version 16. Missing prerequisites fail rather than skip tests. Use a dedicated test database with the original seed contents and sample events still in the future. Schema fixture transactions roll back. Registration/management tests commit uniquely owned fixtures to exercise real connections, then delete only their exact owned rows. Identity counters may advance. Existing users and business records are not reset or reseeded. The last-admin concurrency test creates a uniquely named isolated schema with fixture tables and two administrators, routes the production JDBC SQL to those tables, then drops only that owned schema/tables. Test credentials need CREATE SCHEMA/TABLE and cleanup permissions for this test; normal application credentials do not.
 
-Schema checks cover JDBC/Unicode, trusted constraints, both venue foreign keys, booking/item/current-owner event matching, inventory shapes, historical seat references, payment key scope, success uniqueness after refund, normalized email, amount/time checks, deletion protection, and script rerun refusal. Registration checks cover persistence, compatible stored hashes, normalization, duplicate mapping, and one winner from competing inserts. Schema fixtures do not implement booking/payment application workflows.
+Schema checks cover JDBC/Unicode, trusted constraints, both venue foreign keys, booking/item/current-owner event matching, inventory shapes, historical seat references, payment key scope, success uniqueness after refund, normalized email, amount/time checks, deletion protection, and script rerun refusal. Registration checks cover persistence, compatible stored hashes, normalization, duplicate mapping, and one winner from competing inserts. Schema fixtures do not implement booking/payment application workflows. Management SQL checks additionally cover duplicate category/seat/email values, actor and reference guards, last-admin concurrency with two independent connections, role/history restrictions, draft ownership/status predicates, UTC persistence, inactive references, rollback on errors, public visibility, literal/combined filtering and stable pagination.
 
-The script's `-AuthenticationTests` switch runs one JUnit HTTP scenario containing direct requests with independent cookie sessions. With an available seeded database it checks customer registration, submitted-privilege rejection, validation/escaping, three seeded logins, all nine role-route pairs, missing/wrong/cross-session/stale CSRF, ID rotation and replay, logout, inactive login, changed roles/active status, and actual inactivity expiry. Without an available database it instead checks public availability and safe 503 responses. Account changes affect only unique test-owned fixtures; seeded accounts are used for login only. An abruptly terminated test may leave an account whose email starts with `auth-` and a run-specific UUID; inspect such records before any manual cleanup.
+The script's `-AuthenticationTests` switch runs two JUnit HTTP scenarios with independent cookie sessions. Authentication checks registration, validation/escaping, three seeded role logins, all nine role-route pairs, negative/stale CSRF, session rotation/replay/logout, inactive/changed accounts, expiry and logout from authenticated POST error pages. Management/catalog checks real rendered forms, reference/account/event CRUD, role/ownership and credential-field tampering, CSRF rejection, public visibility, encoded paging and invalid inputs. Without an available database they check foundation availability and generic auth/catalog 503 responses. Seeded accounts are used for login only. Fixture users have `auth-<UUID>-...@example.test` emails; reference data uses a `Fixture <UUID>` label. An abruptly terminated test may leave owned fixtures or an isolated `p3_admin_<UUID>` schema; inspect exact ownership before manual cleanup.
 
 Surefire reports are in `target/surefire-reports`; Failsafe reports are in `target/failsafe-reports`. Each HTTP invocation replaces its scenario report. Tomcat smoke logs and the captured anonymous response are under `target/tomcat-smoke-*/logs`; auth form bodies, passwords, cookies, and tokens are not written as evidence. `mvn clean` removes `target`, including those artifacts and any native library extracted there. Stop any manually launched JVM using that directory before cleaning on Windows. A successful build alone does not establish deployment or database correctness.
 
 ## Technical limitations
 
-Event management, seat allocation, booking/payment workflows, and dashboards are not available. Authentication currently has no email verification, password recovery/change flow, MFA, rate limiting, or account administration interface. Bootstrap CSS is included locally; no JavaScript is required for the implemented forms. HTTPS/proxy setup, production database permission provisioning, connection pooling, load testing, and broader browser/accessibility testing require deployment-specific work.
+Event inventory generation, pricing/publication workflows, seat allocation, booking/payment workflows and dashboards are not available. Authentication has no email verification, password recovery/change, MFA or rate limiting. Bootstrap CSS is local; forms require no JavaScript. Reference suggestions are capped at 50 and accept explicit IDs for other records. Management writes are deliberately serialized. HTTPS/proxy setup, production permission provisioning, pooling, load testing and a broader browser/accessibility matrix require deployment-specific work.
 
 ## Troubleshooting
 
