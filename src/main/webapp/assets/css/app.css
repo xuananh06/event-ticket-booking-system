@@ -1,4 +1,6 @@
 :root { --campus-blue: #234dc4; --campus-ink: #17223c; --campus-muted: #667085; }
+.event-description { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.table td { max-width: 28rem; overflow-wrap: anywhere; }
 body { color: var(--campus-ink); background: #f7f9fd; min-height: 100vh; display: flex; flex-direction: column; }
 a { color: var(--campus-blue); text-underline-offset: .2em; }
 .site-header { background: #fff; border-bottom: 1px solid #e8edf6; }
