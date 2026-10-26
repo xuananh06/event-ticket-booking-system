@@ -2,11 +2,20 @@
 <c:url var="loginUrl" value="/login"/>
 <c:url var="registerUrl" value="/register"/>
 <c:url var="logoutUrl" value="/logout"/>
+<c:url var="browseUrl" value="/events"/>
 <a class="skip-link" href="#main-content">Skip to content</a>
 <header class="site-header">
     <nav class="container d-flex flex-wrap align-items-center justify-content-between gap-3 py-3" aria-label="Main navigation">
         <a class="brand" href="<c:out value='${publicHomeUrl}'/>"><span class="brand-mark" aria-hidden="true">C</span>Campus Events</a>
         <div class="d-flex flex-wrap align-items-center gap-3">
+            <a class="nav-link" href="<c:out value='${browseUrl}'/>">Browse events</a>
+            <c:if test="${currentUser.role == 'ADMIN'}">
+                <c:url var="categoriesUrl" value="/admin/categories"/><a class="nav-link" href="<c:out value='${categoriesUrl}'/>">Categories</a>
+                <c:url var="venuesUrl" value="/admin/venues"/><a class="nav-link" href="<c:out value='${venuesUrl}'/>">Venues</a>
+                <c:url var="seatsUrl" value="/admin/seats"/><a class="nav-link" href="<c:out value='${seatsUrl}'/>">Seats</a>
+                <c:url var="usersUrl" value="/admin/users"/><a class="nav-link" href="<c:out value='${usersUrl}'/>">Accounts</a>
+            </c:if>
+            <c:if test="${currentUser.role == 'ORGANIZER'}"><c:url var="manageEventsUrl" value="/organizer/events"/><a class="nav-link" href="<c:out value='${manageEventsUrl}'/>">Manage events</a></c:if>
             <c:choose>
                 <c:when test="${not empty currentUser}">
                     <c:url var="accountHomeUrl" value="${currentUser.role.homePath}"/>

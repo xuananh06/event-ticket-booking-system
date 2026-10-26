@@ -6,6 +6,18 @@ import com.eventbooking.controller.LoginServlet;
 import com.eventbooking.controller.LogoutServlet;
 import com.eventbooking.controller.RegisterServlet;
 import com.eventbooking.controller.RoleHomeServlet;
+import com.eventbooking.controller.ReferenceServlet;
+import com.eventbooking.controller.AdminUserServlet;
+import com.eventbooking.dao.AdminUserDao;
+import com.eventbooking.service.AdminUserService;
+import com.eventbooking.controller.OrganizerEventServlet;
+import com.eventbooking.dao.EventDao;
+import com.eventbooking.service.EventService;
+import com.eventbooking.controller.PublicEventServlet;
+import com.eventbooking.service.CatalogService;
+import com.eventbooking.dao.JdbcAccess;
+import com.eventbooking.dao.ReferenceDao;
+import com.eventbooking.service.ReferenceService;
 import com.eventbooking.model.Role;
 import com.eventbooking.dao.UserDao;
 import com.eventbooking.filter.AuthenticationFilter;
@@ -54,6 +66,17 @@ public final class ApplicationInitializer implements ServletContextListener {
         context.addServlet("register", new RegisterServlet(auth)).addMapping("/register");
         context.addServlet("login", new LoginServlet(auth, tokens)).addMapping("/login");
         context.addServlet("logout", new LogoutServlet()).addMapping("/logout");
+        ReferenceService references = new ReferenceService(new JdbcAccess(source), new ReferenceDao());
+        context.addServlet("adminUsers",new AdminUserServlet(new AdminUserService(new JdbcAccess(source),new AdminUserDao(),new PasswordHasher()))).addMapping("/admin/users");
+        EventService events = new EventService(new JdbcAccess(source),new EventDao());
+        context.addServlet("organizerEvents",new OrganizerEventServlet(events)).addMapping("/organizer/events");
+        CatalogService catalog = new CatalogService(new JdbcAccess(source),new EventDao());
+        context.addServlet("publicEvents",new PublicEventServlet(catalog,false)).addMapping("/events");
+        context.addServlet("publicEventDetail",new PublicEventServlet(catalog,true)).addMapping("/events/detail");
+        for (ReferenceServlet.Kind kind : ReferenceServlet.Kind.values()) {
+            context.addServlet("admin" + kind.name(), new ReferenceServlet(references, kind))
+                    .addMapping("/admin/" + kind.name().toLowerCase(java.util.Locale.ROOT));
+        }
         for (Role role : Role.values()) {
             context.addServlet(role.name().toLowerCase(java.util.Locale.ROOT) + "Home", new RoleHomeServlet(role)).addMapping(role.getHomePath());
         }
