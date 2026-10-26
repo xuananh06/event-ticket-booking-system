@@ -121,7 +121,10 @@
                         <version>${surefire.version}</version>
                         <configuration>
                             <failIfNoTests>true</failIfNoTests>
-                            <includes><include>**/AuthenticationHttpCheck.java</include></includes>
+                            <includes>
+                                <include>**/AuthenticationHttpCheck.java</include>
+                                <include>**/ManagementHttpCheck.java</include>
+                            </includes>
                         </configuration>
                         <executions>
                             <execution>
