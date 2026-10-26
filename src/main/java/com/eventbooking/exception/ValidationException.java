@@ -10,5 +10,7 @@ public final class ValidationException extends RuntimeException {
         this.errors = Map.copyOf(errors);
     }
 
-    public Map<String, String> getErrors() { return errors; }
+    public Map<String, String> getErrors() {
+        return errors;
+    }
 }

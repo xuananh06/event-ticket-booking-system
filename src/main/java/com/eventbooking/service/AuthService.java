@@ -7,6 +7,7 @@ import com.eventbooking.exception.ValidationException;
 import com.eventbooking.model.UserAccount;
 import com.eventbooking.model.UserProfile;
 import com.eventbooking.security.PasswordHasher;
+
 import java.sql.SQLException;
 import java.util.Map;
 import java.util.Optional;
@@ -27,7 +28,7 @@ public final class AuthService {
     }
 
     public long register(String fullName, String email, String password, String confirmation) {
-        AccountValidation.Fields fields = AccountValidation.registration(fullName,email,password,confirmation,passwords);
+        AccountValidation.Fields fields = AccountValidation.registration(fullName, email, password, confirmation, passwords);
         String hash = passwords.hash(password);
         try {
             // No SELECT-before-INSERT race; SQL Server's unique email key is authoritative.
@@ -43,7 +44,7 @@ public final class AuthService {
     }
 
     public UserProfile authenticate(String email, String password) {
-        String normalizedEmail = AccountValidation.credentials(email,password,passwords);
+        String normalizedEmail = AccountValidation.credentials(email, password, passwords);
         try {
             Optional<UserAccount> account = users.findByEmail(normalizedEmail);
             boolean matches = passwords.matches(password, account.map(UserAccount::getPasswordHash).orElse(DUMMY_HASH));

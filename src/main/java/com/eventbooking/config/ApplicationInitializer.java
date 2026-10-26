@@ -33,6 +33,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletRegistration;
+
 import java.util.Optional;
 import java.util.EnumSet;
 import javax.sql.DataSource;
@@ -67,12 +68,12 @@ public final class ApplicationInitializer implements ServletContextListener {
         context.addServlet("login", new LoginServlet(auth, tokens)).addMapping("/login");
         context.addServlet("logout", new LogoutServlet()).addMapping("/logout");
         ReferenceService references = new ReferenceService(new JdbcAccess(source), new ReferenceDao());
-        context.addServlet("adminUsers",new AdminUserServlet(new AdminUserService(new JdbcAccess(source),new AdminUserDao(),new PasswordHasher()))).addMapping("/admin/users");
-        EventService events = new EventService(new JdbcAccess(source),new EventDao());
-        context.addServlet("organizerEvents",new OrganizerEventServlet(events)).addMapping("/organizer/events");
-        CatalogService catalog = new CatalogService(new JdbcAccess(source),new EventDao());
-        context.addServlet("publicEvents",new PublicEventServlet(catalog,false)).addMapping("/events");
-        context.addServlet("publicEventDetail",new PublicEventServlet(catalog,true)).addMapping("/events/detail");
+        context.addServlet("adminUsers", new AdminUserServlet(new AdminUserService(new JdbcAccess(source), new AdminUserDao(), new PasswordHasher()))).addMapping("/admin/users");
+        EventService events = new EventService(new JdbcAccess(source), new EventDao());
+        context.addServlet("organizerEvents", new OrganizerEventServlet(events)).addMapping("/organizer/events");
+        CatalogService catalog = new CatalogService(new JdbcAccess(source), new EventDao());
+        context.addServlet("publicEvents", new PublicEventServlet(catalog, false)).addMapping("/events");
+        context.addServlet("publicEventDetail", new PublicEventServlet(catalog, true)).addMapping("/events/detail");
         for (ReferenceServlet.Kind kind : ReferenceServlet.Kind.values()) {
             context.addServlet("admin" + kind.name(), new ReferenceServlet(references, kind))
                     .addMapping("/admin/" + kind.name().toLowerCase(java.util.Locale.ROOT));

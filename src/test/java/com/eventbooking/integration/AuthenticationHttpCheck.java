@@ -1,6 +1,7 @@
 package com.eventbooking.integration;
 
 import com.eventbooking.model.Role;
+
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.HttpCookie;
@@ -15,16 +16,21 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
+
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Real HTTP requests against the isolated Tomcat started by Test-Tomcat.ps1. */
+/**
+ * Real HTTP requests against the isolated Tomcat started by Test-Tomcat.ps1.
+ */
 class AuthenticationHttpCheck {
     private static final String PASSWORD = " Http fixture password! ";
     private static final Pattern TOKEN = Pattern.compile("name=\"_csrf\" value=\"([A-Za-z0-9_-]{43})\"");
     private final URI base = URI.create(System.getProperty("auth.baseUrl", ""));
 
-    @Test void deployedAuthenticationContract() throws Exception {
+    @Test
+    void deployedAuthenticationContract() throws Exception {
         assertEquals("http", base.getScheme(), "Supply the isolated HTTP base URL.");
         assertEquals("127.0.0.1", base.getHost(), "HTTP checks target loopback only.");
         assertTrue(base.getPath().endsWith("/"));
@@ -40,7 +46,9 @@ class AuthenticationHttpCheck {
                         () -> postErrorNavigationLogout("", 405));
                 accountChangesAndExpiry(db);
             }
-        } else { unavailableDatabase(); }
+        } else {
+            unavailableDatabase();
+        }
     }
 
     private void publicPagesAndAnonymousCsrf() throws Exception {
@@ -69,7 +77,9 @@ class AuthenticationHttpCheck {
             }
             status(403, first.post(action + "?ignored=1", form(token)));
         }
-        for (Role role : Role.values()) { redirect(first.get(relative(role.getHomePath())), "/login"); }
+        for (Role role : Role.values()) {
+            redirect(first.get(relative(role.getHomePath())), "/login");
+        }
         status(200, first.get("assets/css/app.css"));
         status(200, first.get("assets/vendor/bootstrap-5.3.8.min.css"));
         for (String view : new String[]{"home.jsp", "auth/login.jsp", "auth/register.jsp", "account/home.jsp", "error.jsp"}) {
@@ -167,13 +177,16 @@ class AuthenticationHttpCheck {
         String unknown = db.email();
         HttpResponse<String> absent = browser.post("login", form(token, "email", unknown, "password", PASSWORD));
         HttpResponse<String> wrong = browser.post("login", form(token, "email", email, "password", "Wrong password!"));
-        status(401, absent); status(401, wrong);
+        status(401, absent);
+        status(401, wrong);
         String generic = "Email or password is incorrect.";
-        assertTrue(absent.body().contains(generic)); assertTrue(wrong.body().contains(generic));
+        assertTrue(absent.body().contains(generic));
+        assertTrue(wrong.body().contains(generic));
         assertFalse(wrong.body().contains("Wrong password!"));
         db.changeAccount(email, "CUSTOMER", false);
         HttpResponse<String> inactive = browser.post("login", form(token, "email", email, "password", PASSWORD));
-        status(401, inactive); assertTrue(inactive.body().contains(generic));
+        status(401, inactive);
+        assertTrue(inactive.body().contains(generic));
         redirect(browser.get("customer/home"), "/login");
         db.changeAccount(email, "CUSTOMER", true);
         signIn(browser, email, PASSWORD, Role.CUSTOMER);
@@ -214,7 +227,9 @@ class AuthenticationHttpCheck {
         String logoutToken = renderedToken.group(1);
         assertTrue(authenticatedToken.equals(logoutToken), "Error navigation must preserve the session token.");
         redirect(browser.post(logoutAction, form(logoutToken)), "/");
-        for (Role role : Role.values()) { redirect(browser.get(relative(role.getHomePath())), "/login"); }
+        for (Role role : Role.values()) {
+            redirect(browser.get(relative(role.getHomePath())), "/login");
+        }
         redirect(new Session(authenticatedId).get("customer/home"), "/login");
         status(403, browser.post("logout", form(logoutToken)));
         System.out.println("HTTP POST /" + errorPath + " -> " + expectedStatus + " -> rendered logout -> protected access denied: PASS");
@@ -239,13 +254,23 @@ class AuthenticationHttpCheck {
 
     private static Map<String, String> form(String token, String... pairs) {
         Map<String, String> values = new LinkedHashMap<>();
-        if (token != null) { values.put("_csrf", token); }
-        for (int index = 0; index < pairs.length; index += 2) { values.put(pairs[index], pairs[index + 1]); }
+        if (token != null) {
+            values.put("_csrf", token);
+        }
+        for (int index = 0; index < pairs.length; index += 2) {
+            values.put(pairs[index], pairs[index + 1]);
+        }
         return values;
     }
 
-    private String path(String path) { return base.getPath() + relative(path); }
-    private static String relative(String path) { return path.startsWith("/") ? path.substring(1) : path; }
+    private String path(String path) {
+        return base.getPath() + relative(path);
+    }
+
+    private static String relative(String path) {
+        return path.startsWith("/") ? path.substring(1) : path;
+    }
+
     private static String token(HttpResponse<String> response) {
         var match = TOKEN.matcher(response.body());
         assertTrue(match.find(), "A form must contain a session-bound token; response body suppressed.");
@@ -270,29 +295,38 @@ class AuthenticationHttpCheck {
         private final CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
         private final HttpClient client = HttpClient.newBuilder().cookieHandler(cookies)
                 .followRedirects(HttpClient.Redirect.NEVER).connectTimeout(Duration.ofSeconds(5)).build();
-        Session() { }
+
+        Session() {
+        }
+
         Session(String id) {
             HttpCookie cookie = new HttpCookie("JSESSIONID", id);
             cookie.setPath(base.getPath().replaceAll("/$", ""));
             cookie.setVersion(0);
             cookies.getCookieStore().add(base, cookie);
         }
+
         String id() {
             return cookies.getCookieStore().getCookies().stream().filter(cookie -> cookie.getName().equals("JSESSIONID"))
                     .findFirst().orElseThrow().getValue();
         }
+
         HttpResponse<String> get(String path) throws Exception {
             return client.send(HttpRequest.newBuilder(base.resolve(path)).timeout(Duration.ofSeconds(15)).GET().build(),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         }
+
         HttpResponse<String> post(String path, Map<String, String> values) throws Exception {
             String encoded = values.entrySet().stream().map(entry -> encode(entry.getKey()) + "=" + encode(entry.getValue()))
                     .collect(java.util.stream.Collectors.joining("&"));
             return client.send(HttpRequest.newBuilder(base.resolve(path)).timeout(Duration.ofSeconds(15))
-                    .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
-                    .POST(HttpRequest.BodyPublishers.ofString(encoded, StandardCharsets.UTF_8)).build(),
+                            .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+                            .POST(HttpRequest.BodyPublishers.ofString(encoded, StandardCharsets.UTF_8)).build(),
                     HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         }
-        private String encode(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
+
+        private String encode(String value) {
+            return URLEncoder.encode(value, StandardCharsets.UTF_8);
+        }
     }
 }

@@ -1,12 +1,16 @@
 package com.eventbooking.tools;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
+
 import java.io.Console;
 import java.util.Arrays;
 
-/** Offline seed utility, deliberately excluded from the application WAR. */
+/**
+ * Offline seed utility, deliberately excluded from the application WAR.
+ */
 public final class DemoPasswordHashes {
-    private DemoPasswordHashes() { }
+    private DemoPasswordHashes() {
+    }
 
     public static void main(String[] arguments) {
         char[] password;

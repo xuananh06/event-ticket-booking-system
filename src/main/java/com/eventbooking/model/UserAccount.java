@@ -1,6 +1,8 @@
 package com.eventbooking.model;
 
-/** DAO/service-only account data, never attached to an HTTP request or session. */
+/**
+ * DAO/service-only account data, never attached to an HTTP request or session.
+ */
 public final class UserAccount {
     private final UserProfile profile;
     private final boolean active;
@@ -12,10 +14,20 @@ public final class UserAccount {
         this.passwordHash = passwordHash;
     }
 
-    public UserProfile getProfile() { return profile; }
-    public boolean isActive() { return active; }
-    public String getPasswordHash() { return passwordHash; }
+    public UserProfile getProfile() {
+        return profile;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
 
     @Override
-    public String toString() { return "UserAccount[redacted]"; }
+    public String toString() {
+        return "UserAccount[redacted]";
+    }
 }

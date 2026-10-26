@@ -10,7 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javax.sql.DataSource;
+
 import org.junit.jupiter.api.Test;
+
 import static com.eventbooking.service.DatabaseProbe.Status.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,18 +35,33 @@ class DatabaseProbeTest {
             ResultSet rows = stub(ResultSet.class, (p, m, a) -> switch (m.getName()) {
                 case "next" -> true;
                 case "getInt" -> 1;
-                case "close" -> { actions.add("rows.close"); yield null; }
+                case "close" -> {
+                    actions.add("rows.close");
+                    yield null;
+                }
                 default -> throw new UnsupportedOperationException(m.getName());
             });
             PreparedStatement statement = stub(PreparedStatement.class, (p, m, a) -> switch (m.getName()) {
-                case "setQueryTimeout" -> { assertEquals(5, a[0]); yield null; }
+                case "setQueryTimeout" -> {
+                    assertEquals(5, a[0]);
+                    yield null;
+                }
                 case "executeQuery" -> rows;
-                case "close" -> { actions.add("statement.close"); yield null; }
+                case "close" -> {
+                    actions.add("statement.close");
+                    yield null;
+                }
                 default -> throw new UnsupportedOperationException(m.getName());
             });
             return stub(Connection.class, (p, m, a) -> switch (m.getName()) {
-                case "prepareStatement" -> { assertEquals("SELECT 1", a[0]); yield statement; }
-                case "close" -> { actions.add("connection.close"); yield null; }
+                case "prepareStatement" -> {
+                    assertEquals("SELECT 1", a[0]);
+                    yield statement;
+                }
+                case "close" -> {
+                    actions.add("connection.close");
+                    yield null;
+                }
                 default -> throw new UnsupportedOperationException(m.getName());
             });
         });
@@ -61,12 +78,18 @@ class DatabaseProbeTest {
         PreparedStatement statement = stub(PreparedStatement.class, (p, m, a) -> switch (m.getName()) {
             case "setQueryTimeout" -> null;
             case "executeQuery" -> throw new SQLException("secret JDBC details");
-            case "close" -> { actions.add("statement.close"); yield null; }
+            case "close" -> {
+                actions.add("statement.close");
+                yield null;
+            }
             default -> throw new UnsupportedOperationException(m.getName());
         });
         Connection connection = stub(Connection.class, (p, m, a) -> switch (m.getName()) {
             case "prepareStatement" -> statement;
-            case "close" -> { actions.add("connection.close"); yield null; }
+            case "close" -> {
+                actions.add("connection.close");
+                yield null;
+            }
             default -> throw new UnsupportedOperationException(m.getName());
         });
         DataSource source = stub(DataSource.class, (p, m, a) -> connection);
@@ -76,7 +99,9 @@ class DatabaseProbeTest {
 
     @Test
     void connectionFailureIsReportedAsUnavailable() {
-        DataSource source = stub(DataSource.class, (p, m, a) -> { throw new SQLException("secret"); });
+        DataSource source = stub(DataSource.class, (p, m, a) -> {
+            throw new SQLException("secret");
+        });
         assertEquals(UNAVAILABLE, new DatabaseProbe(Optional.of(source)).check());
     }
 }

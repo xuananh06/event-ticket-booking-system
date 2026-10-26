@@ -3,7 +3,9 @@ package com.eventbooking.config;
 import java.util.Map;
 import java.util.Optional;
 
-/** Environment values are never included in diagnostic messages or toString(). */
+/**
+ * Environment values are never included in diagnostic messages or toString().
+ */
 public final class DatabaseSettings {
     private final Map<String, String> values;
 

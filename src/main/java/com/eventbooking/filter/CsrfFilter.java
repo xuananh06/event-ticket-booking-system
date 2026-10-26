@@ -10,14 +10,19 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.Set;
 
 public final class CsrfFilter implements Filter {
     private final CsrfTokens tokens;
-    public CsrfFilter(CsrfTokens tokens) { this.tokens = tokens; }
 
-    @Override public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    public CsrfFilter(CsrfTokens tokens) {
+        this.tokens = tokens;
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest http = (HttpServletRequest) request;
         String path = http.getServletPath();
         boolean action = SecurityPaths.authAction(path) || SecurityPaths.requiredRole(path).isPresent();

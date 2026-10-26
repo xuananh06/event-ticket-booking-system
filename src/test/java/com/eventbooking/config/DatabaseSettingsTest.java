@@ -1,9 +1,12 @@
 package com.eventbooking.config;
 
 import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
+
 import java.util.HashMap;
 import java.util.Map;
+
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DatabaseSettingsTest {

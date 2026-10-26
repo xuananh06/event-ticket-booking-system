@@ -1,6 +1,8 @@
 package com.eventbooking.model;
 
-/** Safe request/view model. Never contains credentials. */
+/**
+ * Safe request/view model. Never contains credentials.
+ */
 public final class UserProfile {
     private final long id;
     private final String email;
@@ -14,11 +16,24 @@ public final class UserProfile {
         this.role = java.util.Objects.requireNonNull(role);
     }
 
-    public long getId() { return id; }
-    public String getEmail() { return email; }
-    public String getFullName() { return fullName; }
-    public Role getRole() { return role; }
+    public long getId() {
+        return id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public Role getRole() {
+        return role;
+    }
 
     @Override
-    public String toString() { return "UserProfile[id=" + id + ", role=" + role + "]"; }
+    public String toString() {
+        return "UserProfile[id=" + id + ", role=" + role + "]";
+    }
 }

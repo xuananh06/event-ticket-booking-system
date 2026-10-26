@@ -4,6 +4,7 @@ import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.eventbooking.config.DataSourceFactory;
 import com.eventbooking.config.DatabaseSettings;
 import com.eventbooking.service.DatabaseProbe;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -16,12 +17,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import javax.sql.DataSource;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Real SQL Server constraints; all fixture writes are rolled back, never committed. */
+/**
+ * Real SQL Server constraints; all fixture writes are rolled back, never committed.
+ */
 class SqlServerFoundationIT {
     private Connection connection;
     private DataSource source;
@@ -143,11 +148,16 @@ class SqlServerFoundationIT {
         String unicodeName = "Nguyễn Minh Anh 🎟";
         String fixtureEmail = "unicode-" + UUID.randomUUID() + "@example.test";
         try (PreparedStatement insert = connection.prepareStatement("INSERT dbo.users(email,full_name,password_hash,role) SELECT ?,?,password_hash,'CUSTOMER' FROM dbo.users WHERE email=N'customer@example.test'")) {
-            insert.setNString(1, fixtureEmail); insert.setNString(2, unicodeName); insert.executeUpdate();
+            insert.setNString(1, fixtureEmail);
+            insert.setNString(2, unicodeName);
+            insert.executeUpdate();
         }
         try (PreparedStatement select = connection.prepareStatement("SELECT full_name FROM dbo.users WHERE email=?")) {
             select.setNString(1, fixtureEmail);
-            try (ResultSet rows = select.executeQuery()) { assertTrue(rows.next()); assertEquals(unicodeName, rows.getNString(1)); }
+            try (ResultSet rows = select.executeQuery()) {
+                assertTrue(rows.next());
+                assertEquals(unicodeName, rows.getNString(1));
+            }
         }
     }
 

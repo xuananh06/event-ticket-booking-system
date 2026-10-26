@@ -1,13 +1,16 @@
 package com.eventbooking.tools;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class SeedPasswordTest {

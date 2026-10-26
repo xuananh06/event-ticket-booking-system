@@ -7,9 +7,11 @@ import java.sql.SQLException;
 import java.util.Optional;
 import javax.sql.DataSource;
 
-/** A bounded, read-only startup probe. No connection is retained or shared. */
+/**
+ * A bounded, read-only startup probe. No connection is retained or shared.
+ */
 public final class DatabaseProbe {
-    public enum Status { NOT_CONFIGURED, AVAILABLE, UNAVAILABLE }
+    public enum Status {NOT_CONFIGURED, AVAILABLE, UNAVAILABLE}
 
     private final Optional<DataSource> source;
 

@@ -4,18 +4,22 @@ import com.eventbooking.dao.UserDao;
 import com.eventbooking.exception.ValidationException;
 import com.eventbooking.model.Role;
 import com.eventbooking.security.PasswordHasher;
+
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class SqlServerAuthIT {
     private static final String PASSWORD = " Registration test! ";
 
-    @Test void registrationPersistsNormalizedCustomerWithCompatibleHashAndUnicode() throws Exception {
+    @Test
+    void registrationPersistsNormalizedCustomerWithCompatibleHashAndUnicode() throws Exception {
         try (TestDatabase db = new TestDatabase()) {
             String email = db.email();
             // Dedicated Unicode fixture also exercises characters requiring JSP output escaping.
@@ -36,7 +40,8 @@ class SqlServerAuthIT {
         }
     }
 
-    @Test void normalizedDuplicateIsControlledAndPreservesOriginalAccount() throws Exception {
+    @Test
+    void normalizedDuplicateIsControlledAndPreservesOriginalAccount() throws Exception {
         try (TestDatabase db = new TestDatabase()) {
             String email = db.email();
             long id = db.auth.register("Original Member", email, PASSWORD, PASSWORD);
@@ -49,7 +54,8 @@ class SqlServerAuthIT {
         }
     }
 
-    @Test void competingRegistrationsProduceOneCustomerAndOneValidationFailure() throws Exception {
+    @Test
+    void competingRegistrationsProduceOneCustomerAndOneValidationFailure() throws Exception {
         try (TestDatabase db = new TestDatabase()) {
             String email = db.email();
             var executor = Executors.newFixedThreadPool(2);
@@ -59,9 +65,12 @@ class SqlServerAuthIT {
                 var action = (java.util.concurrent.Callable<Boolean>) () -> {
                     ready.countDown();
                     assertTrue(start.await(10, TimeUnit.SECONDS));
-                    try { db.auth.register("Concurrent Member", email, PASSWORD, PASSWORD); return true; }
-                    catch (ValidationException duplicate) {
-                        assertTrue(duplicate.getErrors().containsKey("email")); return false;
+                    try {
+                        db.auth.register("Concurrent Member", email, PASSWORD, PASSWORD);
+                        return true;
+                    } catch (ValidationException duplicate) {
+                        assertTrue(duplicate.getErrors().containsKey("email"));
+                        return false;
                     }
                 };
                 var first = executor.submit(action);

@@ -1,12 +1,15 @@
 package com.eventbooking.security;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public final class PasswordHasher {
     public boolean isValidLength(String password) {
-        if (password == null || password.length() > 72) { return false; }
+        if (password == null || password.length() > 72) {
+            return false;
+        }
         int bytes = password.getBytes(StandardCharsets.UTF_8).length;
         return bytes >= 8 && bytes <= 72;
     }
@@ -18,7 +21,9 @@ public final class PasswordHasher {
         char[] characters = password.toCharArray();
         try {
             return BCrypt.withDefaults().hashToString(12, characters);
-        } finally { Arrays.fill(characters, '\0'); }
+        } finally {
+            Arrays.fill(characters, '\0');
+        }
     }
 
     public boolean matches(String password, String hash) {
@@ -30,6 +35,8 @@ public final class PasswordHasher {
             return BCrypt.verifyer().verify(characters, hash).verified;
         } catch (IllegalArgumentException invalidHash) {
             return false;
-        } finally { Arrays.fill(characters, '\0'); }
+        } finally {
+            Arrays.fill(characters, '\0');
+        }
     }
 }

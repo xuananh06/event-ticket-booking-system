@@ -3,6 +3,7 @@ package com.eventbooking.dao;
 import com.eventbooking.model.Role;
 import com.eventbooking.model.UserAccount;
 import com.eventbooking.model.UserProfile;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -33,13 +34,21 @@ public class UserDao {
     private Optional<UserAccount> find(String sql, Object key, boolean credentials) throws SQLException {
         try (Connection connection = connect(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setQueryTimeout(5);
-            if (key instanceof Long id) { statement.setLong(1, id); }
-            else { statement.setNString(1, (String) key); }
+            if (key instanceof Long id) {
+                statement.setLong(1, id);
+            } else {
+                statement.setNString(1, (String) key);
+            }
             try (ResultSet rows = statement.executeQuery()) {
-                if (!rows.next()) { return Optional.empty(); }
+                if (!rows.next()) {
+                    return Optional.empty();
+                }
                 Role role;
-                try { role = Role.valueOf(rows.getString("role")); }
-                catch (IllegalArgumentException invalidRole) { throw new SQLException("Invalid account state."); }
+                try {
+                    role = Role.valueOf(rows.getString("role"));
+                } catch (IllegalArgumentException invalidRole) {
+                    throw new SQLException("Invalid account state.");
+                }
                 UserProfile profile = new UserProfile(rows.getLong("id"), rows.getNString("email"), rows.getNString("full_name"), role);
                 return Optional.of(new UserAccount(profile, rows.getBoolean("is_active"), credentials ? rows.getString("password_hash") : null));
             }
@@ -54,7 +63,9 @@ public class UserDao {
             statement.setNString(2, email);
             statement.setString(3, passwordHash);
             try (ResultSet rows = statement.executeQuery()) {
-                if (!rows.next()) { throw new SQLException("Account creation did not return an identifier."); }
+                if (!rows.next()) {
+                    throw new SQLException("Account creation did not return an identifier.");
+                }
                 return rows.getLong(1);
             }
         }

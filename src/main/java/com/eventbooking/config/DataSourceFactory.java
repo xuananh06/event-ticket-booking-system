@@ -1,10 +1,12 @@
 package com.eventbooking.config;
 
 import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
+
 import javax.sql.DataSource;
 
 public final class DataSourceFactory {
-    private DataSourceFactory() { }
+    private DataSourceFactory() {
+    }
 
     public static DataSource create(DatabaseSettings settings) {
         SQLServerDataSource source = new SQLServerDataSource();

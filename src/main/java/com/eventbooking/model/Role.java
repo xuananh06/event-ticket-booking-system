@@ -13,6 +13,11 @@ public enum Role {
         this.displayName = displayName;
     }
 
-    public String getHomePath() { return homePath; }
-    public String getDisplayName() { return displayName; }
+    public String getHomePath() {
+        return homePath;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
 }

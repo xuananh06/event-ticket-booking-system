@@ -14,14 +14,19 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+
 import java.io.IOException;
 import java.util.Optional;
 
 public final class AuthenticationFilter implements Filter {
     private final AuthService auth;
-    public AuthenticationFilter(AuthService auth) { this.auth = auth; }
 
-    @Override public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    public AuthenticationFilter(AuthService auth) {
+        this.auth = auth;
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest http = (HttpServletRequest) request;
         HttpServletResponse output = (HttpServletResponse) response;
         String path = http.getServletPath();
@@ -36,14 +41,18 @@ public final class AuthenticationFilter implements Filter {
         if (identity instanceof SessionIdentity account) {
             try {
                 Optional<UserProfile> current = auth.currentUser(account.userId());
-                if (current.isPresent()) { request.setAttribute("currentUser", current.orElseThrow()); }
-                else {
+                if (current.isPresent()) {
+                    request.setAttribute("currentUser", current.orElseThrow());
+                } else {
                     session.invalidate();
                     Web.redirect(http, output, "/login");
                     return;
                 }
             } catch (ServiceUnavailableException unavailable) {
-                if (protectedPage) { Web.error(http, output, 503, Web.UNAVAILABLE); return; }
+                if (protectedPage) {
+                    Web.error(http, output, 503, Web.UNAVAILABLE);
+                    return;
+                }
             }
         }
         if (protectedPage && request.getAttribute("currentUser") == null) {

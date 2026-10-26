@@ -8,23 +8,31 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 
 public final class RegisterServlet extends HttpServlet {
     private final AuthService auth;
-    public RegisterServlet(AuthService auth) { this.auth = auth; }
 
-    @Override protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    public RegisterServlet(AuthService auth) {
+        this.auth = auth;
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         if (request.getAttribute("currentUser") instanceof UserProfile user) {
-            Web.redirect(request, response, user.getRole().getHomePath()); return;
+            Web.redirect(request, response, user.getRole().getHomePath());
+            return;
         }
         request.setAttribute("pageTitle", "Create your account");
         Web.view(request, response, "auth/register");
     }
 
-    @Override protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         if (request.getAttribute("currentUser") instanceof UserProfile user) {
-            Web.redirect(request, response, user.getRole().getHomePath()); return;
+            Web.redirect(request, response, user.getRole().getHomePath());
+            return;
         }
         try {
             auth.register(request.getParameter("fullName"), request.getParameter("email"),

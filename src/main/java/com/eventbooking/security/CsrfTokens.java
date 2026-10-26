@@ -1,6 +1,7 @@
 package com.eventbooking.security;
 
 import jakarta.servlet.http.HttpSession;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -11,13 +12,17 @@ public final class CsrfTokens {
     private final SecureRandom random = new SecureRandom();
     private final int timeoutSeconds;
 
-    public CsrfTokens(int timeoutSeconds) { this.timeoutSeconds = timeoutSeconds; }
+    public CsrfTokens(int timeoutSeconds) {
+        this.timeoutSeconds = timeoutSeconds;
+    }
 
     public String issue(HttpSession session) {
         synchronized (session) {
             session.setMaxInactiveInterval(timeoutSeconds);
             Object existing = session.getAttribute(ATTRIBUTE);
-            if (existing instanceof String token) { return token; }
+            if (existing instanceof String token) {
+                return token;
+            }
             return rotate(session);
         }
     }
@@ -40,6 +45,8 @@ public final class CsrfTokens {
         try {
             Object saved = session.getAttribute(ATTRIBUTE);
             return saved instanceof String token && MessageDigest.isEqual(token.getBytes(StandardCharsets.UTF_8), submitted[0].getBytes(StandardCharsets.UTF_8));
-        } catch (IllegalStateException expiredSession) { return false; }
+        } catch (IllegalStateException expiredSession) {
+            return false;
+        }
     }
 }

@@ -5,6 +5,7 @@ import com.eventbooking.config.DatabaseSettings;
 import com.eventbooking.dao.UserDao;
 import com.eventbooking.security.PasswordHasher;
 import com.eventbooking.service.AuthService;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,9 +17,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import javax.sql.DataSource;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Committed authentication fixtures have unique, explicitly owned email addresses. */
+/**
+ * Committed authentication fixtures have unique, explicitly owned email addresses.
+ */
 final class TestDatabase implements AutoCloseable {
     final DataSource source;
     final AuthService auth;
@@ -64,7 +68,10 @@ final class TestDatabase implements AutoCloseable {
                 "SELECT COUNT_BIG(*) FROM dbo.users WHERE email=?")) {
             statement.setQueryTimeout(5);
             statement.setNString(1, email);
-            try (ResultSet rows = statement.executeQuery()) { assertTrue(rows.next()); return rows.getLong(1); }
+            try (ResultSet rows = statement.executeQuery()) {
+                assertTrue(rows.next());
+                return rows.getLong(1);
+            }
         }
     }
 
@@ -74,8 +81,11 @@ final class TestDatabase implements AutoCloseable {
         }
     }
 
-    @Override public void close() throws SQLException {
-        if (ownedEmails.isEmpty()) { return; }
+    @Override
+    public void close() throws SQLException {
+        if (ownedEmails.isEmpty()) {
+            return;
+        }
         try (Connection connection = source.getConnection(); PreparedStatement statement = connection.prepareStatement(
                 "DELETE FROM dbo.users WHERE email=?")) {
             statement.setQueryTimeout(5);
