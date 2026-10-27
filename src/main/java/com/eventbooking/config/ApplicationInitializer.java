@@ -11,6 +11,11 @@ import com.eventbooking.controller.AdminUserServlet;
 import com.eventbooking.dao.AdminUserDao;
 import com.eventbooking.service.AdminUserService;
 import com.eventbooking.controller.OrganizerEventServlet;
+import com.eventbooking.controller.OrganizerInventoryServlet;
+import com.eventbooking.controller.PublicInventoryServlet;
+import com.eventbooking.dao.InventoryDao;
+import com.eventbooking.service.InventoryService;
+import com.eventbooking.service.PublicInventoryService;
 import com.eventbooking.dao.EventDao;
 import com.eventbooking.service.EventService;
 import com.eventbooking.controller.PublicEventServlet;
@@ -71,9 +76,12 @@ public final class ApplicationInitializer implements ServletContextListener {
         context.addServlet("adminUsers", new AdminUserServlet(new AdminUserService(new JdbcAccess(source), new AdminUserDao(), new PasswordHasher()))).addMapping("/admin/users");
         EventService events = new EventService(new JdbcAccess(source), new EventDao());
         context.addServlet("organizerEvents", new OrganizerEventServlet(events)).addMapping("/organizer/events");
+        InventoryService inventory = new InventoryService(new JdbcAccess(source), new EventDao(), new InventoryDao());
+        context.addServlet("organizerInventory", new OrganizerInventoryServlet(inventory)).addMapping("/organizer/events/inventory");
         CatalogService catalog = new CatalogService(new JdbcAccess(source), new EventDao());
         context.addServlet("publicEvents", new PublicEventServlet(catalog, false)).addMapping("/events");
         context.addServlet("publicEventDetail", new PublicEventServlet(catalog, true)).addMapping("/events/detail");
+        context.addServlet("publicInventory", new PublicInventoryServlet(new PublicInventoryService(new JdbcAccess(source), new EventDao(), new InventoryDao()))).addMapping("/events/seats");
         for (ReferenceServlet.Kind kind : ReferenceServlet.Kind.values()) {
             context.addServlet("admin" + kind.name(), new ReferenceServlet(references, kind))
                     .addMapping("/admin/" + kind.name().toLowerCase(java.util.Locale.ROOT));

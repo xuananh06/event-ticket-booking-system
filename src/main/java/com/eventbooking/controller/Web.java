@@ -17,7 +17,7 @@ public final class Web {
     }
 
     /**
-     * All callers pass fixed application routes, never request parameters.
+     * Callers use application routes with validated numeric IDs, never arbitrary return URLs.
      */
     public static void redirect(HttpServletRequest request, HttpServletResponse response, String path) {
         response.setStatus(HttpServletResponse.SC_SEE_OTHER);

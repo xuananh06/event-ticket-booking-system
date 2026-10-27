@@ -11,6 +11,7 @@
 <%@ include file="../common/messages.jspf" %>
 <c:if test="${not empty event}">
 <section class="account-card mt-0"><h2><c:out value="${event.title}"/></h2><span class="badge text-bg-secondary"><c:out value="${event.status}"/></span>
+<c:url var="inventoryUrl" value="/organizer/events/inventory"><c:param name="eventId" value="${event.id}"/></c:url><p class="mt-3"><a class="btn btn-outline-dark" href="<c:out value='${inventoryUrl}'/>">Seat inventory and prices</a></p>
 <p class="mt-3"><c:out value="${event.categoryName}"/> / <c:out value="${event.venueName}"/></p>
 <p><c:out value="${event.startsLabel}"/> – <c:out value="${event.endsLabel}"/> (Asia/Bangkok)</p>
 <pre class="event-description"><c:out value="${event.description}"/></pre>
@@ -43,6 +44,7 @@
 <p><c:out value="${result.total}"/> events</p><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Event</th><th>References</th><th>Starts (Asia/Bangkok)</th><th>Status</th><th>Actions</th></tr></thead><tbody>
 <c:forEach var="item" items="${result.items}"><tr><td><c:out value="${item.title}"/></td><td><c:out value="${item.categoryName}"/><br><c:out value="${item.venueName}"/></td><td><c:out value="${item.startsLabel}"/></td><td><c:out value="${item.status}"/></td><td>
 <c:url var="detailUrl" value="/organizer/events"><c:param name="id" value="${item.id}"/></c:url><a class="btn btn-sm btn-outline-dark" href="<c:out value='${detailUrl}'/>"><c:out value="${item.draft ? 'View / edit' : 'View'}"/></a>
+<c:url var="inventoryUrl" value="/organizer/events/inventory"><c:param name="eventId" value="${item.id}"/></c:url><a class="btn btn-sm btn-outline-dark" href="<c:out value='${inventoryUrl}'/>">Inventory</a>
 <c:if test="${item.draft}"><form class="d-inline" method="post" action="<c:out value='${eventsUrl}'/>"><input type="hidden" name="_csrf" value="<c:out value='${csrfToken}'/>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="${item.id}"><button class="btn btn-sm btn-outline-danger" type="submit">Delete unreferenced draft</button></form></c:if>
 </td></tr></c:forEach></tbody></table></div><c:if test="${empty result.items}"><p>No matching events.</p></c:if>
 <%@ include file="../common/paging.jspf" %>
