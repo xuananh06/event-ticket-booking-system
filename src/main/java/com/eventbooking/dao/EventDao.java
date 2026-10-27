@@ -116,7 +116,7 @@ public final class EventDao {
         update(c, "DELETE dbo.events WHERE id=? AND organizer_id=? AND status='DRAFT'", id, actor);
     }
 
-    private static String eligible() {
+    static String eligible() {
         return "e.status='PUBLISHED' AND e.starts_at>? AND c.is_active=1 AND v.is_active=1 AND u.is_active=1 AND u.role='ORGANIZER'";
     }
 
