@@ -1,6 +1,6 @@
 # Event Ticket Booking System
 
-A Java web project for event ticket booking and seat reservation. The application provides account security, reference/account administration, organizer-owned draft events, and public event browsing. The SQL Server schema also supports the planned booking domain.
+A Java web project for event ticket booking and seat reservation. The application provides account security, reference/account administration, organizer-owned event setup and publication, and public event/seat browsing. The SQL Server schema also supports the planned booking domain.
 
 ## Capabilities
 
@@ -12,13 +12,14 @@ Implemented:
 - Admin category, venue, physical-seat and account management, active-state controls and guarded deletion.
 - Organizer-owned draft event CRUD and read-only access to other owned event statuses, using Asia/Bangkok forms and UTC storage.
 - Public upcoming published-event lists/details, literal title search, combined category/venue/date filters and pagination.
+- Additive per-event seat generation, exact VND pricing, atomic selected-seat price changes and guarded publication.
+- Read-only paged seat layouts, effective availability counts and available-price ranges, without customer/booking-owner disclosure.
 - External database configuration and a bounded, read-only connectivity check at application startup.
 - A nine-table SQL Server schema with relational constraints, query indexes, demo accounts, events, and seat inventory.
 - Unit tests, real SQL Server schema/registration tests, and isolated Tomcat HTTP checks with independent cookie sessions.
 
 Planned capabilities, not yet available as application workflows:
 
-- Event seat inventory generation, pricing, publication workflows and seat availability.
 - Timed seat reservations, booking management, simulated payments, cancellations, and dashboards.
 
 Role welcome pages retain account information and navigation to the implemented management screens. Booking controls and statistics are not available.
@@ -125,6 +126,9 @@ Names support Unicode and allow 1-150 UTF-16 code units after stripping outer wh
 | `GET /admin/users`, `POST /admin/users` | Admin account list/search/forms and explicit management actions |
 | `GET /organizer/events`, `POST /organizer/events` | Organizer-owned list/details/forms and draft save/delete actions |
 | `GET /events`, `GET /events/detail?id=...` | Public eligible-event list/details |
+| `GET /organizer/events/inventory?eventId=...` | Owned inventory, pricing and publication readiness |
+| `POST /organizer/events/inventory` | Explicit `generate`, `price` or confirmed `publish` actions |
+| `GET /events/seats?eventId=...` | Read-only eligible public seat layout, prices and effective availability |
 
 Guests requesting protected pages redirect to sign-in. A signed-in user requesting another role's page receives 403. The application rereads the current role and active status from the database rather than trusting a cached role. Disabled/deleted identities are invalidated. Unknown accounts, wrong passwords, and inactive accounts receive the same credential error. Database failures produce a generic 503 for database-dependent actions.
 
@@ -136,13 +140,27 @@ Admin navigation provides Categories, Venues, Seats and Accounts. Lists include 
 
 Account creation accepts a valid role, initial state and confirmed password. Profile/role/state edits preserve the hash. Administrators cannot disable, delete or demote themselves or remove the last active administrator. Event owners must retain ORGANIZER and booking owners must retain CUSTOMER. Referenced users may be disabled when permitted, with history retained. Every mutation revalidates the actor inside its transaction.
 
-Organizers can view only their own management records and mutate only DRAFT events. New events are always DRAFT; submitted owner/status fields cannot publish or transfer them. Drafts with inventory/bookings cannot be deleted or moved to another venue. New assignments require active categories/venues; unchanged inactive references can remain on an existing draft and their labels remain visible. Descriptions are escaped plain text with preserved line breaks and a 10,000 UTF-16-unit limit. Titles allow up to 200 units. Drafts must start in the future and end after they start. Forms/display use Asia/Bangkok; JDBC stores UTC DATETIME2 with millisecond precision. Publishing, inventory generation and pricing actions are not implemented.
+Organizers can view only their own management records and mutate only DRAFT events. New events are always DRAFT; submitted owner/status fields cannot publish or transfer them through an ordinary save. Drafts with inventory/bookings cannot be deleted or moved to another venue. New assignments require active categories/venues; unchanged inactive references can remain on an existing draft and their labels remain visible. Descriptions are escaped plain text with preserved line breaks and a 10,000 UTF-16-unit limit. Titles allow up to 200 units. Drafts must start in the future and end after they start. Forms/display use Asia/Bangkok; JDBC stores UTC DATETIME2 with millisecond precision. Inventory setup and publication have stricter guards described below.
 
 Anyone can browse `/events`. SQL visibility requires PUBLISHED, a start strictly after database UTC time, and an active ORGANIZER/category/venue. Draft/past/closed/cancelled/inactive records and missing events share the public 404 detail response. Management ownership checks apply independently.
 
 Event filters are `q` (literal title text, at most 100 characters), `category`, `venue`, inclusive local `from`/`to` dates, `page` and `size`. Default size is 10, maximum 50; pages are positive and capped at 1,000,000. Ordering uses start time and ID. Count/list use the same captured database time and predicates. Empty or beyond-last pages show a clear empty state. Suggestions include up to 50 reference records; ID fields accept valid identifiers beyond those suggestions. Pagination retains encoded filters under the actual deployment context.
 
 Mutations submit `action`, fields and CSRF in the POST body without action query strings. GET can load a form but never saves, deletes or changes active state. Validation returns 400, role failures 403, missing/not-owned records 404, integrity/business conflicts 409 and unavailable services 503. Management writes use short SERIALIZABLE transactions and a transaction-owned SQL Server application lock. This conservative serialization favors correctness for this project over high write throughput.
+
+## Seat inventory, pricing and publication
+
+Open **Manage events**, select an owned event, then **Seat inventory and prices**. Only an active ORGANIZER can change their own future DRAFT event with active category/venue and valid stored details. Admin has no organizer override. Events with booking/item history or inventory that is HELD, SOLD or has an owner/deadline cannot be reconfigured, even after a hold expires.
+
+**Generate missing seats** copies currently active physical seats from the event venue. Enter an explicit initial price for new rows. Existing inventory IDs, prices and states are preserved; repeating generation with no missing seats reports a no-op. An empty active-seat source is rejected. After Admin adds physical seats to a draft's venue, generation can add those missing seats. No action deletes/rebuilds existing inventory.
+
+Prices use exact `BigDecimal` / `DECIMAL(18,2)` amounts in VND. Enter a nonnegative ordinary decimal, up to `9999999999999999.99`, with at most two fractional digits; explicit `0` is valid for free seats. Input is bounded to 64 characters after stripping surrounding whitespace. Missing values, signs, exponent notation, separators, nonfinite values and excess fractional precision are rejected without rounding. Update one seat using its row form, or select 1-50 distinct seats on the current page and submit one batch price. Every inventory ID must belong to the owned event; any invalid member rejects the entire batch. Events sharing a venue keep independent prices and inventory.
+
+The publication section displays readiness or concrete reasons. Confirm that event details, inventory and prices are final, then submit **Publish event**. The server locks/rechecks current data and requires DRAFT, active parents/organizer, valid future times, nonempty pristine inventory, no history and exact one-to-one coverage of the venue's currently active physical seats. Database UTC time is checked again at the guarded status update. Repeated publication returns a controlled conflict. Published details, venue, inventory membership and prices are read-only. Later physical-seat additions do not automatically change a published event's frozen inventory.
+
+Public event details link to **View seat availability and prices**. The same future/PUBLISHED/active-parent visibility rules apply to guessed seat-page IDs. Layout pages show real row labels, physical numbers and inventory identity; sparse numbers do not create empty grid cells. Page/size bounds match event browsing, with at most 50 seats per page. Counts cover the full inventory and the price range covers effectively available seats only.
+
+AVAILABLE is available; HELD is held only while its expiry is strictly after captured database UTC time; equality or an expired hold is effectively available. SOLD or inactive/mismatched physical seats are unavailable. The legend and text states supplement color. Public reads never rewrite stored states, expose customer/current-booking identity or create reservations. Availability is informational; seat selection, holds, checkout and payment are not implemented.
 
 ## External configuration
 
@@ -231,7 +249,7 @@ The Windows script requires readable Tomcat 10.1.44 binaries/configuration, JDK 
 - `-JdbcNativeDirectory`: optional directory containing the matching native JDBC library.
 - `-ExpectedDatabaseStatus`: `NOT_CONFIGURED` (default), `AVAILABLE`, or `UNAVAILABLE`.
 - `-ContextName`: WAR deployment name, default `event-booking`; letters, digits, underscores, and hyphens are accepted, starting with a letter or digit, up to 50 characters. The reserved root-context name `ROOT` is not supported by this script.
-- `-AuthenticationTests`: additionally run both authentication and management/catalog JUnit HTTP scenarios through Maven `http-it`. Requires Maven on PATH. With `AVAILABLE`, also requires seeded accounts, fixture-write database access and matching `EVENT_TEST_DB_CONFIRM` / `EVENT_DB_NAME`.
+- `-AuthenticationTests`: additionally run authentication, management/catalog and inventory/publication/availability JUnit HTTP scenarios through Maven `http-it`. Requires Maven on PATH. With `AVAILABLE`, also requires seeded accounts, fixture-write database access and matching `EVENT_TEST_DB_CONFIRM` / `EVENT_DB_NAME`.
 
 #### PowerShell execution policy
 
@@ -284,13 +302,15 @@ The profile requires matching `EVENT_TEST_DB_CONFIRM` and `EVENT_DB_NAME`, compl
 
 Schema checks cover JDBC/Unicode, trusted constraints, both venue foreign keys, booking/item/current-owner event matching, inventory shapes, historical seat references, payment key scope, success uniqueness after refund, normalized email, amount/time checks, deletion protection, and script rerun refusal. Registration checks cover persistence, compatible stored hashes, normalization, duplicate mapping, and one winner from competing inserts. Schema fixtures do not implement booking/payment application workflows. Management SQL checks additionally cover duplicate category/seat/email values, actor and reference guards, last-admin concurrency with two independent connections, role/history restrictions, draft ownership/status predicates, UTC persistence, inactive references, rollback on errors, public visibility, literal/combined filtering and stable pagination.
 
-The script's `-AuthenticationTests` switch runs two JUnit HTTP scenarios with independent cookie sessions. Authentication checks registration, validation/escaping, three seeded role logins, all nine role-route pairs, negative/stale CSRF, session rotation/replay/logout, inactive/changed accounts, expiry and logout from authenticated POST error pages. Management/catalog checks real rendered forms, reference/account/event CRUD, role/ownership and credential-field tampering, CSRF rejection, public visibility, encoded paging and invalid inputs. Without an available database they check foundation availability and generic auth/catalog 503 responses. Seeded accounts are used for login only. Fixture users have `auth-<UUID>-...@example.test` emails; reference data uses a `Fixture <UUID>` label. An abruptly terminated test may leave owned fixtures or an isolated `p3_admin_<UUID>` schema; inspect exact ownership before manual cleanup.
+Inventory SQL checks additionally cover additive/repeated generation, exact/free prices, mixed-ID batch atomicity, publication coverage/history guards, independent event prices, real connection races with pricing/generation/reference edits/publication, delayed publication across its start boundary, deterministic hold-expiry equality, public visibility, full-count paging and non-mutating availability reads. HELD/SOLD/booking-item rows are test-owned fixtures; no application booking endpoint is implied.
+
+The script's `-AuthenticationTests` switch runs three JUnit HTTP scenarios with independent cookie sessions. Authentication checks registration, validation/escaping, three seeded role logins, all nine role-route pairs, negative/stale CSRF, session rotation/replay/logout, inactive/changed accounts, expiry and logout from authenticated POST error pages. Management/catalog checks real rendered forms, reference/account/event CRUD, role/ownership and credential-field tampering, CSRF rejection, public visibility, encoded paging and invalid inputs. Inventory checks rendered generation/pricing/publication forms, immutable setup, ownership/CSRF/tampering, effective public availability and validation/conflict logout. Without an available database they check foundation availability and generic auth/catalog/inventory 503 responses. Seeded accounts are used for login only. Fixture users have `auth-<UUID>-...@example.test` emails; reference data uses a `Fixture <UUID>` label. An abruptly terminated test may leave owned fixtures or an isolated `p3_admin_<UUID>` schema; inspect exact ownership before manual cleanup.
 
 Surefire reports are in `target/surefire-reports`; Failsafe reports are in `target/failsafe-reports`. Each HTTP invocation replaces its scenario report. Tomcat smoke logs and the captured anonymous response are under `target/tomcat-smoke-*/logs`; auth form bodies, passwords, cookies, and tokens are not written as evidence. `mvn clean` removes `target`, including those artifacts and any native library extracted there. Stop any manually launched JVM using that directory before cleaning on Windows. A successful build alone does not establish deployment or database correctness.
 
 ## Technical limitations
 
-Event inventory generation, pricing/publication workflows, seat allocation, booking/payment workflows and dashboards are not available. Authentication has no email verification, password recovery/change, MFA or rate limiting. Bootstrap CSS is local; forms require no JavaScript. Reference suggestions are capped at 50 and accept explicit IDs for other records. Management writes are deliberately serialized. HTTPS/proxy setup, production permission provisioning, pooling, load testing and a broader browser/accessibility matrix require deployment-specific work.
+Seat allocation, holds, checkout, booking/payment/cancellation workflows and dashboards are not available. Authentication has no email verification, password recovery/change, MFA or rate limiting. Bootstrap CSS is local; forms require no JavaScript. Reference suggestions and inventory pages are capped at 50; explicit reference IDs and paging support larger data sets. Management writes are deliberately serialized. Availability uses one captured database time and identical predicates across separate read statements, rather than promising a snapshot-isolated view during external writes. HTTPS/proxy setup, production permission provisioning, pooling, load testing and a broader browser/accessibility matrix require deployment-specific work.
 
 ## Troubleshooting
 
