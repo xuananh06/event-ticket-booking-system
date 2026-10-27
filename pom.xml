@@ -124,6 +124,7 @@
                             <includes>
                                 <include>**/AuthenticationHttpCheck.java</include>
                                 <include>**/ManagementHttpCheck.java</include>
+                                <include>**/InventoryHttpCheck.java</include>
                             </includes>
                         </configuration>
                         <executions>

@@ -28,6 +28,16 @@ final class HttpBrowser {
 
     HttpResponse<String> post(String path, Map<String, String> fields) throws Exception {
         String body = fields.entrySet().stream().map(e -> encode(e.getKey()) + "=" + encode(e.getValue())).collect(java.util.stream.Collectors.joining("&"));
+        return sendPost(path, body);
+    }
+
+    HttpResponse<String> post(String path, Map<String, String> fields, String repeated, List<String> values) throws Exception {
+        String body = fields.entrySet().stream().map(e -> encode(e.getKey()) + "=" + encode(e.getValue())).collect(java.util.stream.Collectors.joining("&"));
+        for (String value : values) { body += "&" + encode(repeated) + "=" + encode(value); }
+        return sendPost(path, body);
+    }
+
+    private HttpResponse<String> sendPost(String path, String body) throws Exception {
         return client.send(HttpRequest.newBuilder(base.resolve(path)).timeout(Duration.ofSeconds(20)).header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8").POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
     }
 
@@ -69,13 +79,17 @@ final class HttpBrowser {
     }
 
     static Form form(HttpResponse<String> response, String action, Long id) {
+        return form(response, action, "id", id);
+    }
+
+    static Form form(HttpResponse<String> response, String action, String identityField, Long id) {
         Matcher forms = Pattern.compile("(?s)<form\\b([^>]*)>(.*?)</form>").matcher(response.body());
         while (forms.find()) {
             String attributes = forms.group(1), body = forms.group(2);
             if (!attributes.contains("method=\"post\"") || !body.contains("name=\"action\" value=\"" + action + "\"")) {
                 continue;
             }
-            if (id != null && !body.contains("name=\"id\" value=\"" + id + "\"")) {
+            if (id != null && !body.contains("name=\"" + identityField + "\" value=\"" + id + "\"")) {
                 continue;
             }
             Matcher url = Pattern.compile("action=\"([^\"]+)\"").matcher(attributes);

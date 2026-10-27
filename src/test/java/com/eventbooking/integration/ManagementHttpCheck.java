@@ -70,7 +70,9 @@ class ManagementHttpCheck {
                 status(403, denied.get(route));
             }
         }
-        status(400, browser.get("admin/categories?id=9223372036854775808"));
+        HttpBrowser validationAdmin = new HttpBrowser();
+        validationAdmin.login(f.email(f.admin), P3Fixture.PASSWORD, "admin/home");
+        status(400, validationAdmin.get("admin/categories?id=9223372036854775808"));
         System.out.println("HTTP reference forms, persistence, escaping, mutation CSRF and role boundaries: PASS");
     }
 
