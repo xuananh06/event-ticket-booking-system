@@ -5,7 +5,12 @@
     <div class="alert alert-danger" role="alert"><c:out value="${errorMessage}"/></div>
 </c:if>
 <c:if test="${not empty errors}">
-    <div class="alert alert-danger" role="alert">Please check the highlighted fields and try again.
-        <ul class="mb-0"><c:forEach var="fieldError" items="${errors}"><li><c:out value="${fieldError.value}"/></li></c:forEach></ul>
+    <div class="alert alert-danger" role="alert">
+        Please check the highlighted fields and try again.
+        <ul class="mb-0">
+            <c:forEach var="fieldError" items="${errors}">
+                <li><c:out value="${fieldError.value}"/></li>
+            </c:forEach>
+        </ul>
     </div>
 </c:if>

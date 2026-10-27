@@ -1,26 +1,94 @@
 <p>Counts cover the full event inventory. This layout shows one page of real seat records; rows may continue on another page.</p>
 <dl class="row inventory-summary">
-<dt class="col-sm-3">Total seats</dt><dd class="col-sm-9"><c:out value="${summary.total}"/></dd>
-<dt class="col-sm-3">Available</dt><dd class="col-sm-9"><c:out value="${summary.available}"/></dd>
-<dt class="col-sm-3">Held</dt><dd class="col-sm-9"><c:out value="${summary.held}"/></dd>
-<dt class="col-sm-3">Unavailable</dt><dd class="col-sm-9"><c:out value="${summary.unavailable}"/></dd>
-<dt class="col-sm-3">Available price range</dt><dd class="col-sm-9"><c:choose><c:when test="${summary.available > 0}"><c:out value="${summary.minimumPriceLabel}"/> - <c:out value="${summary.maximumPriceLabel}"/> VND</c:when><c:otherwise>No seats currently available.</c:otherwise></c:choose></dd>
+    <dt class="col-sm-3">Total seats</dt>
+    <dd class="col-sm-9"><c:out value="${summary.total}"/></dd>
+    <dt class="col-sm-3">Available</dt>
+    <dd class="col-sm-9"><c:out value="${summary.available}"/></dd>
+    <dt class="col-sm-3">Held</dt>
+    <dd class="col-sm-9"><c:out value="${summary.held}"/></dd>
+    <dt class="col-sm-3">Unavailable</dt>
+    <dd class="col-sm-9"><c:out value="${summary.unavailable}"/></dd>
+    <dt class="col-sm-3">Available price range</dt>
+    <dd class="col-sm-9">
+        <c:choose>
+            <c:when test="${summary.available > 0}"><c:out value="${summary.minimumPriceLabel}"/> - <c:out value="${summary.maximumPriceLabel}"/> VND</c:when>
+            <c:otherwise>No seats currently available.</c:otherwise>
+        </c:choose>
+    </dd>
 </dl>
 <p><strong>Legend:</strong> AVAILABLE: available now; HELD: temporarily held; UNAVAILABLE: sold or inactive. Expired holds count as available. Displayed availability is informational and does not reserve a seat.</p>
 <div class="table-responsive">
-<table class="table align-middle inventory-table"><caption>Seat layout and VND prices</caption><thead><tr>
-<c:if test="${editable}"><th scope="col">Select</th></c:if><th scope="col">Row / number</th><th scope="col">Inventory / physical ID</th><th scope="col">Price (VND)</th><th scope="col">State</th><c:if test="${editable}"><th scope="col">Change one price</th></c:if>
-</tr></thead>
-<c:forEach var="row" items="${rows}">
-<tbody><tr><th scope="rowgroup" colspan="${editable ? 6 : 4}">Row <c:out value="${row.label}"/></th></tr>
-<c:forEach var="seat" items="${row.seats}"><tr>
-<c:if test="${editable}"><td><input class="form-check-input" type="checkbox" form="batch-pricing" name="eventSeatId" value="${seat.id}" id="select-${seat.id}" ${selected.contains(seat.id.toString()) ? 'checked' : ''}><label class="visually-hidden" for="select-${seat.id}">Select row <c:out value="${seat.rowLabel}"/> seat <c:out value="${seat.seatNumber}"/></label></td></c:if>
-<td><c:out value="${seat.rowLabel}"/> / <c:out value="${seat.seatNumber}"/></td><td><c:out value="${seat.id}"/> / <c:out value="${seat.seatId}"/></td><td><c:out value="${seat.priceLabel}"/></td><td><span class="badge text-bg-secondary"><c:out value="${seat.state}"/></span></td>
-<c:if test="${editable}"><td><form method="post" action="<c:out value='${inventoryUrl}'/>" class="d-flex flex-wrap gap-2">
-<input type="hidden" name="_csrf" value="<c:out value='${csrfToken}'/>"><input type="hidden" name="action" value="price"><input type="hidden" name="eventId" value="${event.id}"><input type="hidden" name="eventSeatId" value="${seat.id}">
-<input type="hidden" name="page" value="${result.number}"><input type="hidden" name="size" value="${result.size}">
-<label class="visually-hidden" for="price-${seat.id}">New price for inventory seat <c:out value="${seat.id}"/> (VND)</label><input class="form-control inventory-price" id="price-${seat.id}" name="price" inputmode="decimal" maxlength="64" required value="<c:out value='${selected.contains(seat.id.toString()) ? priceValue : seat.priceLabel}'/>"><button class="btn btn-sm btn-outline-dark" type="submit">Update one seat</button>
-</form></td></c:if>
-</tr></c:forEach></tbody></c:forEach>
-</table></div>
-<c:if test="${empty result.items}"><p class="alert alert-info"><c:out value="${summary.total == 0 ? 'No inventory has been generated for this event.' : 'No seats on this page. Return to an earlier page.'}"/></p></c:if>
+    <table class="table align-middle inventory-table">
+        <caption>Seat layout and VND prices</caption>
+        <thead>
+            <tr>
+                <c:if test="${editable}">
+                    <th scope="col">Select</th>
+                </c:if>
+                <th scope="col">Row / number</th>
+                <th scope="col">Inventory / physical ID</th>
+                <th scope="col">Price (VND)</th>
+                <th scope="col">State</th>
+                <c:if test="${editable}">
+                    <th scope="col">Change one price</th>
+                </c:if>
+            </tr>
+        </thead>
+        <c:forEach var="row" items="${rows}">
+            <tbody>
+                <tr>
+                    <th scope="rowgroup" colspan="${editable ? 6 : 4}">Row <c:out value="${row.label}"/></th>
+                </tr>
+                <c:forEach var="seat" items="${row.seats}">
+                    <tr>
+                        <c:if test="${editable}">
+                            <td>
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    form="batch-pricing"
+                                    name="eventSeatId"
+                                    value="${seat.id}"
+                                    id="select-${seat.id}"
+                                    ${selected.contains(seat.id.toString()) ? 'checked' : ''}>
+                                <label class="visually-hidden" for="select-${seat.id}">Select row <c:out value="${seat.rowLabel}"/> seat <c:out value="${seat.seatNumber}"/></label>
+                            </td>
+                        </c:if>
+                        <td><c:out value="${seat.rowLabel}"/> / <c:out value="${seat.seatNumber}"/></td>
+                        <td><c:out value="${seat.id}"/> / <c:out value="${seat.seatId}"/></td>
+                        <td><c:out value="${seat.priceLabel}"/></td>
+                        <td><span class="badge text-bg-secondary"><c:out value="${seat.state}"/></span></td>
+                        <c:if test="${editable}">
+                            <td>
+                                <form
+                                    method="post"
+                                    action="<c:out value='${inventoryUrl}'/>"
+                                    class="d-flex flex-wrap gap-2">
+                                    <input type="hidden" name="_csrf" value="<c:out value='${csrfToken}'/>">
+                                    <input type="hidden" name="action" value="price">
+                                    <input type="hidden" name="eventId" value="${event.id}">
+                                    <input type="hidden" name="eventSeatId" value="${seat.id}">
+                                    <input type="hidden" name="page" value="${result.number}">
+                                    <input type="hidden" name="size" value="${result.size}">
+                                    <label class="visually-hidden" for="price-${seat.id}">New price for inventory seat <c:out value="${seat.id}"/> (VND)</label>
+                                    <input
+                                        class="form-control inventory-price"
+                                        id="price-${seat.id}"
+                                        name="price"
+                                        inputmode="decimal"
+                                        maxlength="64"
+                                        required
+                                        value="<c:out value='${selected.contains(seat.id.toString()) ? priceValue : seat.priceLabel}'/>">
+                                    <button class="btn btn-sm btn-outline-dark" type="submit">Update one seat</button>
+                                </form>
+                            </td>
+                        </c:if>
+                    </tr>
+                </c:forEach>
+            </tbody>
+        </c:forEach>
+    </table>
+</div>
+<c:if test="${empty result.items}">
+    <p class="alert alert-info"><c:out value="${summary.total == 0 ? 'No inventory has been generated for this event.' : 'No seats on this page. Return to an earlier page.'}"/></p>
+</c:if>

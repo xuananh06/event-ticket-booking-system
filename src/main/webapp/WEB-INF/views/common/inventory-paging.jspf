@@ -1,6 +1,31 @@
 <nav aria-label="Inventory pagination" class="d-flex flex-wrap gap-3 my-4">
-<c:if test="${result.previous}"><c:url var="previousUrl" value="${pagingRoute}"><c:param name="eventId" value="${event.id}"/><c:param name="page" value="${result.number - 1}"/><c:param name="size" value="${result.size}"/></c:url><a class="btn btn-outline-dark" href="<c:out value='${previousUrl}'/>">Previous</a></c:if>
-<span class="align-self-center">Page <c:out value="${result.number}"/> &middot; <c:out value="${result.total}"/> seats</span>
-<c:if test="${result.next}"><c:url var="nextUrl" value="${pagingRoute}"><c:param name="eventId" value="${event.id}"/><c:param name="page" value="${result.number + 1}"/><c:param name="size" value="${result.size}"/></c:url><a class="btn btn-outline-dark" href="<c:out value='${nextUrl}'/>">Next</a></c:if>
+    <c:if test="${result.previous}">
+        <c:url var="previousUrl" value="${pagingRoute}">
+            <c:param name="eventId" value="${event.id}"/>
+            <c:param name="page" value="${result.number - 1}"/>
+            <c:param name="size" value="${result.size}"/>
+        </c:url>
+        <a class="btn btn-outline-dark" href="<c:out value='${previousUrl}'/>">Previous</a>
+    </c:if>
+    <span class="align-self-center">Page <c:out value="${result.number}"/> &middot; <c:out value="${result.total}"/> seats</span>
+    <c:if test="${result.next}">
+        <c:url var="nextUrl" value="${pagingRoute}">
+            <c:param name="eventId" value="${event.id}"/>
+            <c:param name="page" value="${result.number + 1}"/>
+            <c:param name="size" value="${result.size}"/>
+        </c:url>
+        <a class="btn btn-outline-dark" href="<c:out value='${nextUrl}'/>">Next</a>
+    </c:if>
 </nav>
-<form method="get" action="<c:url value='${pagingRoute}'/>" class="d-flex flex-wrap align-items-end gap-3"><input type="hidden" name="eventId" value="${event.id}"><label for="inventory-size">Seats per page<input class="form-control" id="inventory-size" name="size" type="number" min="1" max="50" value="${result.size}"></label><button class="btn btn-outline-dark" type="submit">Change page size</button></form>
+<form method="get" action="<c:url value='${pagingRoute}'/>" class="d-flex flex-wrap align-items-end gap-3">
+    <input type="hidden" name="eventId" value="${event.id}">
+    <label for="inventory-size">Seats per page<input
+        class="form-control"
+        id="inventory-size"
+        name="size"
+        type="number"
+        min="1"
+        max="50"
+        value="${result.size}"></label>
+    <button class="btn btn-outline-dark" type="submit">Change page size</button>
+</form>
