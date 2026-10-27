@@ -1,3 +1,4 @@
+<%@ page pageEncoding="UTF-8" %>
 <nav aria-label="Pagination" class="d-flex flex-wrap gap-3 my-4">
     <c:if test="${result.previous}">
         <c:url var="previousUrl" value="${pagingRoute}">
