@@ -26,6 +26,10 @@ final class HttpBrowser {
         return client.send(HttpRequest.newBuilder(base.resolve(path)).timeout(Duration.ofSeconds(20)).GET().build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
     }
 
+    HttpResponse<String> head(String path) throws Exception {
+        return client.send(HttpRequest.newBuilder(base.resolve(path)).timeout(Duration.ofSeconds(20)).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+    }
+
     HttpResponse<String> post(String path, Map<String, String> fields) throws Exception {
         String body = fields.entrySet().stream().map(e -> encode(e.getKey()) + "=" + encode(e.getValue())).collect(java.util.stream.Collectors.joining("&"));
         return sendPost(path, body);
