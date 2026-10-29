@@ -1,6 +1,6 @@
 # Event Ticket Booking System
 
-A Java web project for event ticket booking and seat reservation. The application provides account security, reference/account administration, organizer-owned event setup and publication, and public event/seat browsing. The SQL Server schema also supports the planned booking domain.
+A Java web project for event ticket booking and seat reservation. The application provides account security, reference/account administration, organizer-owned event setup and publication, public event/seat browsing, and Customer reservations with protected checkout summaries.
 
 ## Capabilities
 
@@ -14,15 +14,17 @@ Implemented:
 - Public upcoming published-event lists/details, literal title search, combined category/venue/date filters and pagination.
 - Additive per-event seat generation, exact VND pricing, atomic selected-seat price changes and guarded publication.
 - Read-only paged seat layouts, effective availability counts and available-price ranges, without customer/booking-owner disclosure.
+- Customer selection of 1-50 seats, atomic PENDING bookings and five-minute holds using SQL Server time.
+- Ownership-protected checkout with exact price/seat snapshots, effective expiry and safe release of expired holds.
 - External database configuration and a bounded, read-only connectivity check at application startup.
 - A nine-table SQL Server schema with relational constraints, query indexes, demo accounts, events, and seat inventory.
 - Unit tests, real SQL Server schema/registration tests, and isolated Tomcat HTTP checks with independent cookie sessions.
 
 Planned capabilities, not yet available as application workflows:
 
-- Timed seat reservations, booking management, simulated payments, cancellations, and dashboards.
+- Simulated payment, ticket confirmation, booking history/management, early cancellation, refunds and dashboards.
 
-Role welcome pages retain account information and navigation to the implemented management screens. Booking controls and statistics are not available.
+Role welcome pages retain account information and navigation to implemented screens. Customers enter reservation selection from an eligible event's public seat page. Statistics are not available.
 
 ## Requirements
 
@@ -77,7 +79,7 @@ The schema has nine tables: `users`, `categories`, `venues`, `seats`, `events`, 
 - A filtered unique index on successful payment history, retained after refund, and indexes for event searches, booking history, and inventory availability.
 - No cascading deletion of transaction history. Historical items may reference the same seat in different bookings.
 
-Email must equal SQL Server `LOWER(LTRIM(RTRIM(email)))`, without leading/trailing ASCII spaces. Its explicit collation is `Latin1_General_100_CI_AS_SC`: uniqueness is case insensitive and accent sensitive. Public account forms accept ASCII email addresses and normalize them with locale-independent lowercase before database access. Statuses use binary collation and reject trailing spaces. Constraints do not establish booking ownership rules, matching item totals and hold deadlines, minimum item counts, valid state transitions, or concurrency-safe allocation. Those booking workflows are not implemented.
+Email must equal SQL Server `LOWER(LTRIM(RTRIM(email)))`, without leading/trailing ASCII spaces. Its explicit collation is `Latin1_General_100_CI_AS_SC`: uniqueness is case insensitive and accent sensitive. Public account forms accept ASCII email addresses and normalize them with locale-independent lowercase before database access. Statuses use binary collation and reject trailing spaces. Constraints alone do not establish booking ownership, matching item totals/deadlines, minimum item counts or safe allocation; reservation service transactions enforce those rules alongside the retained constraints.
 
 ### Demo data and password format
 
@@ -129,6 +131,10 @@ Names support Unicode and allow 1-150 UTF-16 code units after stripping outer wh
 | `GET /organizer/events/inventory?eventId=...` | Owned inventory, pricing and publication readiness |
 | `POST /organizer/events/inventory` | Explicit `generate`, `price` or confirmed `publish` actions |
 | `GET /events/seats?eventId=...` | Read-only eligible public seat layout, prices and effective availability |
+| `GET /customer/events/seats?eventId=...` | Protected Customer seat selection with `page` and `size` |
+| `POST /customer/bookings/hold` | Atomic current-event seat hold; repeated `eventSeatId` fields and paging in the body |
+| `GET /customer/bookings/checkout?bookingId=...` | Read-only summary belonging to the current Customer |
+| `POST /customer/bookings/expire` | Owner-only normalization/release of an already expired PENDING booking |
 
 Guests requesting protected pages redirect to sign-in. A signed-in user requesting another role's page receives 403. The application rereads the current role and active status from the database rather than trusting a cached role. Disabled/deleted identities are invalidated. Unknown accounts, wrong passwords, and inactive accounts receive the same credential error. Database failures produce a generic 503 for database-dependent actions.
 
@@ -160,7 +166,21 @@ The publication section displays readiness or concrete reasons. Confirm that eve
 
 Public event details link to **View seat availability and prices**. The same future/PUBLISHED/active-parent visibility rules apply to guessed seat-page IDs. Layout pages show real row labels, physical numbers and inventory identity; sparse numbers do not create empty grid cells. Page/size bounds match event browsing, with at most 50 seats per page. Counts cover the full inventory and the price range covers effectively available seats only.
 
-AVAILABLE is available; HELD is held only while its expiry is strictly after captured database UTC time; equality or an expired hold is effectively available. SOLD or inactive/mismatched physical seats are unavailable. The legend and text states supplement color. Public reads never rewrite stored states, expose customer/current-booking identity or create reservations. Availability is informational; seat selection, holds, checkout and payment are not implemented.
+AVAILABLE is available; HELD is held only while its expiry is strictly after captured database UTC time; equality or an expired hold is effectively available. SOLD or inactive/mismatched physical seats are unavailable. The legend and text states supplement color. Public reads never rewrite stored states, expose customer/current-booking identity or create reservations. Customers can choose **Select seats** to enter the protected reservation flow; guests receive a sign-in link. Other roles keep read-only event browsing.
+
+## Customer seat reservations
+
+Sign in as a CUSTOMER, browse an upcoming published event, open its seat availability page and choose **Select seats**. Select 1-50 available inventory seats from the current page. Changing page or page size clears that page's selection; there is no basket spanning pages. Selection alone and GET/HEAD requests never allocate seats.
+
+The selected count and provisional VND total update with optional local JavaScript using exact integer cents. With JavaScript disabled, checkboxes and form submission still work; checkout shows the server-calculated total. The server ignores submitted price, total, customer, code, state and deadline fields. It uses stored prices, permits free seats and rejects an aggregate total exceeding `9999999999999999.99` without rounding or partial allocation.
+
+Choose **Hold selected seats for five minutes**. One transaction revalidates the current active CUSTOMER, eligible event/organizer/category/venue and physical inventory, creates a PENDING booking, claims every selected seat, writes immutable item price/label snapshots and stores the exact total. A booking is created only if every requested seat is available or has an expired hold. Missing, foreign, inactive, sold or actively held seats reject the entire selection. Duplicate/malformed selections return 400; unavailable seats and conflicting requests return 409. Valid paging and visible selections are retained on recoverable selection errors so the user can correct and resubmit.
+
+SQL Server supplies one UTC creation value at millisecond precision; every seat receives the booking's exact deadline, five minutes after that creation time. Lock waits consume that fixed lifetime. Eligibility and expiry are checked again after waiting, before completion. Refreshing checkout, signing in again, session expiry or resubmitting cannot extend the deadline. Repeating an actively held selection returns a conflict without another booking or a renewed allocation. Reserve competing seats only after reviewing current availability.
+
+Success redirects to the owned checkout URL. It shows the booking code, escaped event title and seat snapshots, quantity, unit prices, total, original deadline and effective state. **A PENDING booking is a temporary reservation, not a confirmed ticket. Payment is not available.** Remaining seconds are a server-time snapshot at page load, not a continuously running or authoritative browser timer. Refresh to obtain a new remaining-time check without renewal. Keep the checkout URL to return to that reservation; a booking-history screen is not yet available.
+
+A PENDING booking is effectively EXPIRED when its deadline is equal to or earlier than database UTC time. Checkout GET does not write cleanup. Other customers can reuse expired inventory immediately, without a scheduler or opening the old checkout. The optional **Release this expired hold** POST records EXPIRED and releases only expired HELD rows still owned by that booking. It cannot cancel an unexpired reservation, release sold inventory or free seats reassigned to a newer booking. Repeated expiration is harmless, and booking/item history is retained. Another Customer's guessed booking ID returns 404 without disclosing its details; ADMIN and ORGANIZER cannot enter Customer routes.
 
 ## External configuration
 
@@ -209,7 +229,7 @@ Download `mssql-jdbc_auth.zip` from the [official driver release](https://github
 
 Use a trusted SQL Server certificate matching the configured hostname. For an isolated local test with a self-signed certificate, explicitly setting `EVENT_DB_TRUST_SERVER_CERTIFICATE=true` keeps encryption but bypasses certificate validation; keep the default `false` for normal deployment. The configured host and port must match the SQL Server instance's accessible TCP endpoint.
 
-`DataSourceFactory` uses typed driver setters and bounded login/socket timeouts. `SQLServerDataSource` is a connection factory, not a connection pool. The bootstrap injects dependencies through constructors. The probe and DAO acquire fresh connections and close result sets, statements, and connections with try-with-resources; no JDBC connection is retained between requests. Authentication uses parameterized queries; application permissions need SELECT and the relevant INSERT/UPDATE/DELETE access for implemented management, plus permission to request the database application lock. Application code does not require schema creation permissions. Integration tests require additional permissions for their test fixtures and schema checks.
+`DataSourceFactory` uses typed driver setters and bounded login/socket timeouts. `SQLServerDataSource` is a connection factory, not a connection pool. The bootstrap injects dependencies through constructors. The probe and DAO acquire fresh connections and close result sets, statements, and connections with try-with-resources; no JDBC connection is retained between requests. Authentication uses parameterized queries; application permissions need SELECT and the relevant INSERT/UPDATE/DELETE access for management/reservations, plus permission to request the database application lock. Application code does not require schema creation permissions. Integration tests require additional permissions for their test fixtures and schema checks.
 
 ## Build and deployment
 
@@ -249,7 +269,7 @@ The Windows script requires readable Tomcat 10.1.44 binaries/configuration, JDK 
 - `-JdbcNativeDirectory`: optional directory containing the matching native JDBC library.
 - `-ExpectedDatabaseStatus`: `NOT_CONFIGURED` (default), `AVAILABLE`, or `UNAVAILABLE`.
 - `-ContextName`: WAR deployment name, default `event-booking`; letters, digits, underscores, and hyphens are accepted, starting with a letter or digit, up to 50 characters. The reserved root-context name `ROOT` is not supported by this script.
-- `-AuthenticationTests`: additionally run authentication, management/catalog and inventory/publication/availability JUnit HTTP scenarios through Maven `http-it`. Requires Maven on PATH. With `AVAILABLE`, also requires seeded accounts, fixture-write database access and matching `EVENT_TEST_DB_CONFIRM` / `EVENT_DB_NAME`.
+- `-AuthenticationTests`: additionally run authentication, management/catalog, inventory/publication/availability and Customer reservation JUnit HTTP scenarios through Maven `http-it`. Requires Maven on PATH. With `AVAILABLE`, also requires seeded accounts, fixture-write database access and matching `EVENT_TEST_DB_CONFIRM` / `EVENT_DB_NAME`.
 
 #### PowerShell execution policy
 
@@ -302,15 +322,17 @@ The profile requires matching `EVENT_TEST_DB_CONFIRM` and `EVENT_DB_NAME`, compl
 
 Schema checks cover JDBC/Unicode, trusted constraints, both venue foreign keys, booking/item/current-owner event matching, inventory shapes, historical seat references, payment key scope, success uniqueness after refund, normalized email, amount/time checks, deletion protection, and script rerun refusal. Registration checks cover persistence, compatible stored hashes, normalization, duplicate mapping, and one winner from competing inserts. Schema fixtures do not implement booking/payment application workflows. Management SQL checks additionally cover duplicate category/seat/email values, actor and reference guards, last-admin concurrency with two independent connections, role/history restrictions, draft ownership/status predicates, UTC persistence, inactive references, rollback on errors, public visibility, literal/combined filtering and stable pagination.
 
-Inventory SQL checks additionally cover additive/repeated generation, exact/free prices, mixed-ID batch atomicity, publication coverage/history guards, independent event prices, real connection races with pricing/generation/reference edits/publication, delayed publication across its start boundary, deterministic hold-expiry equality, public visibility, full-count paging and non-mutating availability reads. HELD/SOLD/booking-item rows are test-owned fixtures; no application booking endpoint is implied.
+Inventory SQL checks additionally cover additive/repeated generation, exact/free prices, mixed-ID batch atomicity, publication coverage/history guards, independent event prices, real connection races with pricing/generation/reference edits/publication, delayed publication across its start boundary, deterministic hold-expiry equality, public visibility, full-count paging and non-mutating availability reads.
 
-The script's `-AuthenticationTests` switch runs three JUnit HTTP scenarios with independent cookie sessions. Authentication checks registration, validation/escaping, three seeded role logins, all nine role-route pairs, negative/stale CSRF, session rotation/replay/logout, inactive/changed accounts, expiry and logout from authenticated POST error pages. Management/catalog checks real rendered forms, reference/account/event CRUD, role/ownership and credential-field tampering, CSRF rejection, public visibility, encoded paging and invalid inputs. Inventory checks rendered generation/pricing/publication forms, immutable setup, ownership/CSRF/tampering, effective public availability and validation/conflict logout. Without an available database they check foundation availability and generic auth/catalog/inventory 503 responses. Seeded accounts are used for login only. Fixture users have `auth-<UUID>-...@example.test` emails; reference data uses a `Fixture <UUID>` label. An abruptly terminated test may leave owned fixtures or an isolated `p3_admin_<UUID>` schema; inspect exact ownership before manual cleanup.
+Reservation SQL checks cover exact booking/items/deadlines, ownership, aggregate overflow, whole-selection rollback and injected item-write failure. Synchronized independent connections exercise single-seat, overlapping/disjoint and repeat requests, plus the production guarded allocation SQL without the shared management application lock. Other checks force waits across event-start/hold-deadline boundaries, reject lock-timeout operations, reuse expired inventory while the old booking is locked, and prove repeated old expiration preserves a newer owner's hold and both item histories. All writes belong to exact fixture events; seeded and existing business data are preserved.
+
+The script's `-AuthenticationTests` switch runs four JUnit HTTP scenarios with independent cookie sessions. Authentication checks registration, validation/escaping, three seeded role logins, all nine role-route pairs, negative/stale CSRF, session rotation/replay/logout, inactive/changed accounts, expiry and logout from authenticated POST error pages. Management/catalog checks real rendered forms, reference/account/event CRUD, role/ownership and credential-field tampering, CSRF rejection, public visibility, encoded paging and invalid inputs. Inventory checks rendered generation/pricing/publication forms, immutable setup, ownership/CSRF/tampering, effective public availability and validation/conflict logout. Reservations exercise actual non-first-page forms, corrected resubmission, server-derived fields, owned checkout, negative CSRF, mixed-seat atomicity, real session expiry without renewal, expired takeover and safe normalization/logout. Without an available database they check guest boundaries, foundation availability and generic auth/catalog/inventory 503 responses. Seeded accounts are used for login only. Fixture users have `auth-<UUID>-...@example.test` emails; reference data uses a `Fixture <UUID>` label. An abruptly terminated test may leave owned fixtures or an isolated `p3_admin_<UUID>` schema; inspect exact ownership before manual cleanup.
 
 Surefire reports are in `target/surefire-reports`; Failsafe reports are in `target/failsafe-reports`. Each HTTP invocation replaces its scenario report. Tomcat smoke logs and the captured anonymous response are under `target/tomcat-smoke-*/logs`; auth form bodies, passwords, cookies, and tokens are not written as evidence. `mvn clean` removes `target`, including those artifacts and any native library extracted there. Stop any manually launched JVM using that directory before cleaning on Windows. A successful build alone does not establish deployment or database correctness.
 
 ## Technical limitations
 
-Seat allocation, holds, checkout, booking/payment/cancellation workflows and dashboards are not available. Authentication has no email verification, password recovery/change, MFA or rate limiting. Bootstrap CSS is local; forms require no JavaScript. Reference suggestions and inventory pages are capped at 50; explicit reference IDs and paging support larger data sets. Management writes are deliberately serialized. Availability uses one captured database time and identical predicates across separate read statements, rather than promising a snapshot-isolated view during external writes. HTTPS/proxy setup, production permission provisioning, pooling, load testing and a broader browser/accessibility matrix require deployment-specific work.
+Payment, confirmation, booking history/management, early cancellation, refunds and dashboards are not available. Authentication has no email verification, password recovery/change, MFA or rate limiting. Bootstrap CSS is local; core forms and checkout require no JavaScript. Reference suggestions and inventory pages are capped at 50; explicit reference IDs and paging support larger data sets. Reservation and management writes share deliberately conservative database serialization, so high-throughput booking performance is not established. Availability uses one captured database time and identical predicates across separate read statements, rather than promising a snapshot-isolated view during external writes. Expiry has no background worker; effective expiration/reuse and owner-triggered normalization work independently of one. HTTPS/proxy setup, production permission provisioning, pooling, load testing and a broader browser/accessibility matrix require deployment-specific work.
 
 ## Troubleshooting
 

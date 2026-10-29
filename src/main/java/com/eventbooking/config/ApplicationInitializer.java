@@ -13,6 +13,9 @@ import com.eventbooking.service.AdminUserService;
 import com.eventbooking.controller.OrganizerEventServlet;
 import com.eventbooking.controller.OrganizerInventoryServlet;
 import com.eventbooking.controller.PublicInventoryServlet;
+import com.eventbooking.controller.CustomerBookingServlet;
+import com.eventbooking.dao.BookingDao;
+import com.eventbooking.service.BookingService;
 import com.eventbooking.dao.InventoryDao;
 import com.eventbooking.service.InventoryService;
 import com.eventbooking.service.PublicInventoryService;
@@ -82,6 +85,8 @@ public final class ApplicationInitializer implements ServletContextListener {
         context.addServlet("publicEvents", new PublicEventServlet(catalog, false)).addMapping("/events");
         context.addServlet("publicEventDetail", new PublicEventServlet(catalog, true)).addMapping("/events/detail");
         context.addServlet("publicInventory", new PublicInventoryServlet(new PublicInventoryService(new JdbcAccess(source), new EventDao(), new InventoryDao()))).addMapping("/events/seats");
+        context.addServlet("customerBooking", new CustomerBookingServlet(new BookingService(new JdbcAccess(source), new BookingDao())))
+                .addMapping("/customer/events/seats", "/customer/bookings/hold", "/customer/bookings/checkout", "/customer/bookings/expire");
         for (ReferenceServlet.Kind kind : ReferenceServlet.Kind.values()) {
             context.addServlet("admin" + kind.name(), new ReferenceServlet(references, kind))
                     .addMapping("/admin/" + kind.name().toLowerCase(java.util.Locale.ROOT));
