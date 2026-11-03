@@ -126,6 +126,8 @@
                                 <include>**/ManagementHttpCheck.java</include>
                                 <include>**/InventoryHttpCheck.java</include>
                                 <include>**/BookingHttpCheck.java</include>
+                                <include>**/PaymentHttpCheck.java</include>
+                                <include>**/CancellationHttpCheck.java</include>
                             </includes>
                         </configuration>
                         <executions>

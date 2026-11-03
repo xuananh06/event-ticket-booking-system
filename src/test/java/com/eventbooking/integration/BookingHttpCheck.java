@@ -90,7 +90,10 @@ class BookingHttpCheck {
         assertTrue(checkout.body().contains("Row H\u00e0&lt;&amp; / 12"));
         assertTrue(checkout.body().contains("&lt;b&gt;Customer event&lt;/b&gt;"));
         assertFalse(checkout.body().contains("<b>Customer event</b>"));
-        assertTrue(checkout.body().contains("Payment is not available yet."));
+        assertTrue(checkout.body().contains("Simulate successful payment"));
+        assertTrue(checkout.body().contains("Simulate failed payment"));
+        assertEquals(customer.path("customer/bookings/pay"), FinancialForms.form(checkout, "pay").action());
+        assertTrue(FinancialForms.form(checkout, "pay").fields().get("paymentKey").matches("[0-9a-f-]{36}"));
         assertTrue(checkout.body().contains(summary.booking().getExpiresUtc()));
         String after = digest(x);
         status(409, customer.post(form.action(), form.fields(), "eventSeatId", checked));
