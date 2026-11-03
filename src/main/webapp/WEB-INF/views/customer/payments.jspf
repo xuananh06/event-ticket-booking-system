@@ -1,0 +1,105 @@
+<%@ page pageEncoding="UTF-8" %>
+<section aria-labelledby="payment-heading" class="mt-4">
+    <h2 id="payment-heading" class="h4">Simulated payment</h2>
+    <p>This is a local simulation. No money is transferred and no bank or card information is collected.</p>
+    <c:if test="${not empty recorded}">
+        <div class="alert alert-info" role="status" id="payment-result">
+            <c:choose>
+                <c:when test="${wasReplay}">Recorded attempt replayed; no new financial action was performed.</c:when>
+                <c:otherwise>Simulation attempt recorded.</c:otherwise>
+            </c:choose>
+            Original outcome: <strong><c:out value="${recorded.originalOutcome}"/></strong>.
+            Current attempt state: <strong><c:out value="${recorded.status}"/></strong>.
+            Current booking state: <strong><c:out value="${summary.state}"/></strong>.
+        </div>
+    </c:if>
+    <c:url var="payUrl" value="/customer/bookings/pay"/>
+    <c:choose>
+        <c:when test="${canPay and not empty paymentKey}">
+            <form method="post" action="<c:out value='${payUrl}'/>" class="d-flex flex-wrap gap-2 mb-3" id="payment-form">
+                <input type="hidden" name="_csrf" value="<c:out value='${csrfToken}'/>">
+                <input type="hidden" name="action" value="pay">
+                <input type="hidden" name="bookingId" value="${booking.id}">
+                <input type="hidden" name="paymentKey" value="<c:out value='${paymentKey}'/>">
+                <%@ include file="booking-context.jspf" %>
+                <button class="btn btn-primary" type="submit" name="outcome" value="success">Simulate successful payment</button>
+                <button class="btn btn-outline-dark" type="submit" name="outcome" value="failure">Simulate failed payment</button>
+            </form>
+            <p>Both actions use the stored total of <c:out value="${booking.totalLabel}"/> VND. A failed simulation keeps the original hold deadline.</p>
+        </c:when>
+        <c:when test="${canPay}">
+            <p>Open a new attempt to obtain a valid simulation form.</p>
+        </c:when>
+        <c:otherwise>
+            <p id="payment-unavailable">This reservation cannot accept a new payment attempt. Recorded attempts remain available below.</p>
+        </c:otherwise>
+    </c:choose>
+    <c:if test="${canPay}">
+        <a class="btn btn-link px-0 mb-3" href="<c:out value='${detailUrl}'/>">Open a new simulation attempt</a>
+    </c:if>
+    <h3 class="h5">Payment history</h3>
+    <div class="table-responsive">
+        <table class="table">
+            <caption>Recorded attempts; replay returns the original outcome alongside the current state.</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Attempt</th>
+                    <th scope="col">Original outcome</th>
+                    <th scope="col">Current state</th>
+                    <th scope="col">Amount (VND)</th>
+                    <th scope="col">Times (Asia/Bangkok)</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <c:forEach var="attempt" items="${attempts.items}">
+                    <tr>
+                        <td><c:out value="${attempt.id}"/></td>
+                        <td><c:out value="${attempt.originalOutcome}"/></td>
+                        <td><c:out value="${attempt.status}"/></td>
+                        <td><c:out value="${attempt.amountLabel}"/></td>
+                        <td>
+                            <div>Created: <c:out value="${attempt.createdLabel}"/></div>
+                            <c:if test="${not empty attempt.succeededLabel}">
+                                <div>Succeeded: <c:out value="${attempt.succeededLabel}"/></div>
+                            </c:if>
+                            <c:if test="${not empty attempt.refundedLabel}">
+                                <div>Refunded: <c:out value="${attempt.refundedLabel}"/></div>
+                            </c:if>
+                        </td>
+                        <td>
+                            <form method="post" action="<c:out value='${payUrl}'/>">
+                                <input type="hidden" name="_csrf" value="<c:out value='${csrfToken}'/>">
+                                <input type="hidden" name="action" value="replay">
+                                <input type="hidden" name="bookingId" value="${booking.id}">
+                                <input type="hidden" name="paymentKey" value="<c:out value='${attempt.key}'/>">
+                                <input type="hidden" name="outcome" value="<c:out value='${attempt.originalOutcome}'/>">
+                                <%@ include file="booking-context.jspf" %>
+                                <button class="btn btn-outline-dark btn-sm" type="submit">Replay recorded attempt</button>
+                            </form>
+                        </td>
+                    </tr>
+                </c:forEach>
+                <c:if test="${empty attempts.items}">
+                    <tr><td colspan="6">No payment attempts on this page.</td></tr>
+                </c:if>
+            </tbody>
+        </table>
+    </div>
+    <nav aria-label="Payment history pagination" class="d-flex flex-wrap gap-3 my-3">
+        <c:forEach var="direction" items="${['previous','next']}">
+            <c:if test="${(direction == 'previous' and attempts.previous) or (direction == 'next' and attempts.next)}">
+                <c:url var="attemptPageUrl" value="/customer/bookings/detail">
+                    <c:param name="bookingId" value="${booking.id}"/>
+                    <c:param name="page" value="${historyPage}"/>
+                    <c:param name="size" value="${historySize}"/>
+                    <c:param name="status" value="${historyStatus}"/>
+                    <c:param name="paymentPage" value="${attempts.number + (direction == 'next' ? 1 : -1)}"/>
+                    <c:param name="paymentSize" value="${attempts.size}"/>
+                </c:url>
+                <a href="<c:out value='${attemptPageUrl}'/>"><c:out value="${direction == 'next' ? 'Next attempts' : 'Previous attempts'}"/></a>
+            </c:if>
+        </c:forEach>
+        <span>Attempt page <c:out value="${attempts.number}"/>; <c:out value="${attempts.total}"/> attempts</span>
+    </nav>
+</section>

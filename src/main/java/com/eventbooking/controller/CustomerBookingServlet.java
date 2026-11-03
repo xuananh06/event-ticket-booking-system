@@ -6,6 +6,7 @@ import com.eventbooking.model.Page;
 import com.eventbooking.model.SeatLayout;
 import com.eventbooking.service.BookingService;
 import com.eventbooking.service.Inputs;
+import com.eventbooking.service.PaymentRules;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,12 +27,6 @@ public final class CustomerBookingServlet extends HttpServlet {
         try {
             if (request.getServletPath().equals("/customer/events/seats")) {
                 selection(request, response, Inputs.id(request.getParameter("eventId"), "eventId"), Page.number(request.getParameter("page")), Page.size(request.getParameter("size")));
-            } else if (request.getServletPath().equals("/customer/bookings/checkout")) {
-                var summary = bookings.checkout(ManagementWeb.actor(request), Inputs.id(request.getParameter("bookingId"), "bookingId"));
-                request.setAttribute("summary", summary);
-                request.setAttribute("booking", summary.booking());
-                request.setAttribute("pageTitle", "Reservation checkout");
-                Web.view(request, response, "customer/checkout");
             } else {
                 Web.error(request, response, 405, "Use the reservation form to submit this action.");
             }
@@ -42,7 +37,7 @@ public final class CustomerBookingServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         if (request.getServletPath().equals("/customer/bookings/expire")) {
             try {
-                long id = Inputs.id(request.getParameter("bookingId"), "bookingId");
+                long id = Inputs.id(PaymentRules.single(request.getParameterValues("bookingId"), "bookingId"), "bookingId");
                 bookings.expire(ManagementWeb.actor(request), id);
                 Web.redirect(request, response, "/customer/bookings/checkout?bookingId=" + id);
             } catch (RuntimeException failure) { ManagementWeb.failure(request, response, failure); }

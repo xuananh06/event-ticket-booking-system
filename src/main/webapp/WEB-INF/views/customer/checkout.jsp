@@ -9,7 +9,9 @@
         <%@ include file="../common/navigation.jspf" %>
         <main id="main-content" class="container page-content">
             <section class="account-card mt-0">
-                <h1 class="h2">Reservation checkout</h1>
+                <h1 class="h2"><c:out value="${pageTitle}"/></h1>
+                <%@ include file="../common/messages.jspf" %>
+                <%@ include file="booking-links.jspf" %>
                 <h2 class="h4"><c:out value="${booking.eventTitle}"/></h2>
                 <dl class="row mt-4">
                     <dt class="col-sm-4">Booking code</dt>
@@ -22,19 +24,32 @@
                     <dd class="col-sm-8"><time datetime="<c:out value='${booking.expiresUtc}'/>"><c:out value="${booking.expiresLabel}"/> (Asia/Bangkok)</time></dd>
                     <dt class="col-sm-4">Remaining at server check</dt>
                     <dd class="col-sm-8"><c:out value="${summary.remainingSeconds}"/> seconds</dd>
+                    <dt class="col-sm-4">Created (Asia/Bangkok)</dt>
+                    <dd class="col-sm-8"><c:out value="${booking.createdLabel}"/></dd>
+                    <c:if test="${not empty booking.confirmedLabel}">
+                        <dt class="col-sm-4">Confirmed (Asia/Bangkok)</dt>
+                        <dd class="col-sm-8"><c:out value="${booking.confirmedLabel}"/></dd>
+                    </c:if>
+                    <c:if test="${not empty booking.cancelledLabel}">
+                        <dt class="col-sm-4">Cancelled (Asia/Bangkok)</dt>
+                        <dd class="col-sm-8"><c:out value="${booking.cancelledLabel}"/></dd>
+                    </c:if>
                 </dl>
                 <c:choose>
                     <c:when test="${summary.state == 'PENDING'}">
-                        <p class="alert alert-info">These seats are temporarily held. This reservation is not a confirmed ticket. Payment is not available yet.</p>
+                        <p class="alert alert-info">These seats are temporarily held. This reservation is not a confirmed ticket.</p>
                     </c:when>
                     <c:when test="${summary.state == 'EXPIRED'}">
                         <p class="alert alert-warning">This reservation has expired. The seats may already have been reserved by someone else.</p>
                     </c:when>
+                    <c:when test="${summary.state == 'CONFIRMED'}">
+                        <p class="alert alert-success">This booking is confirmed. Its payment history remains available.</p>
+                    </c:when>
                     <c:otherwise>
-                        <p>This reservation is read-only.</p>
+                        <p>This booking is cancelled. Its history remains available.</p>
                     </c:otherwise>
                 </c:choose>
-                <p>Refreshing or signing in again does not extend the original deadline. Remaining time is checked by the server; this page does not renew or confirm a reservation.</p>
+                <p>Refreshing or signing in again does not extend the original deadline. Remaining time is checked by the server; loading this page does not renew or confirm a reservation.</p>
                 <div class="table-responsive">
                     <table class="table">
                         <caption>Reserved seat and unit-price snapshots</caption>
@@ -60,6 +75,10 @@
                         </tfoot>
                     </table>
                 </div>
+                <%@ include file="payments.jspf" %>
+                <c:if test="${canCancel}">
+                    <p><a class="btn btn-outline-danger" href="<c:out value='${cancelUrl}'/>">Cancel whole booking</a></p>
+                </c:if>
                 <c:if test="${summary.canNormalize}">
                     <c:url var="expireUrl" value="/customer/bookings/expire"/>
                     <form method="post" action="<c:out value='${expireUrl}'/>">
@@ -72,7 +91,10 @@
                 <c:url var="selectUrl" value="/customer/events/seats">
                     <c:param name="eventId" value="${booking.eventId}"/>
                 </c:url>
-                <a href="<c:out value='${selectUrl}'/>">View current seats</a>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="<c:out value='${historyUrl}'/>">Return to My bookings</a>
+                    <a href="<c:out value='${selectUrl}'/>">View current seats</a>
+                </div>
             </section>
         </main>
         <%@ include file="../common/footer.jspf" %>
