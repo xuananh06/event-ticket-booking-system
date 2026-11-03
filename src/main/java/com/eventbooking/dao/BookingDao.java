@@ -87,12 +87,13 @@ public class BookingDao {
 
     public Booking owned(Connection c, long customer, long id, boolean lock) throws SQLException {
         String hint = lock ? " WITH (UPDLOCK,HOLDLOCK)" : "";
-        try (PreparedStatement s = statement(c, "SELECT b.id,b.booking_code,b.event_id,e.title,b.status,b.total_amount,b.created_at,b.expires_at "
+        try (PreparedStatement s = statement(c, "SELECT b.id,b.booking_code,b.event_id,e.title,b.status,b.total_amount,b.created_at,b.expires_at,b.confirmed_at,b.cancelled_at "
                 + "FROM dbo.bookings b" + hint + " JOIN dbo.events e ON e.id=b.event_id WHERE b.id=? AND b.customer_id=?", id, customer);
              ResultSet r = s.executeQuery()) {
             if (!r.next()) { throw DomainException.missing(); }
             return new Booking(r.getLong("id"), r.getString("booking_code"), r.getLong("event_id"), r.getNString("title"),
-                    r.getString("status"), r.getBigDecimal("total_amount"), r.getObject("created_at", LocalDateTime.class), r.getObject("expires_at", LocalDateTime.class));
+                    r.getString("status"), r.getBigDecimal("total_amount"), r.getObject("created_at", LocalDateTime.class), r.getObject("expires_at", LocalDateTime.class),
+                    r.getObject("confirmed_at", LocalDateTime.class), r.getObject("cancelled_at", LocalDateTime.class));
         }
     }
 

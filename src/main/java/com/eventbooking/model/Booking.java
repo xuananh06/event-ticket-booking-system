@@ -8,7 +8,8 @@ import java.time.format.DateTimeFormatter;
 
 /** Owned checkout projection; never used as an allocation decision. */
 public record Booking(long id, String code, long eventId, String eventTitle, String status,
-                      BigDecimal total, LocalDateTime createdAt, LocalDateTime expiresAt) {
+                      BigDecimal total, LocalDateTime createdAt, LocalDateTime expiresAt,
+                      LocalDateTime confirmedAt, LocalDateTime cancelledAt) {
     public long getId() { return id; }
     public String getCode() { return code; }
     public long getEventId() { return eventId; }
@@ -17,4 +18,7 @@ public record Booking(long id, String code, long eventId, String eventTitle, Str
     public String getTotalLabel() { return total.toPlainString(); }
     public String getExpiresLabel() { return EventTimes.label(expiresAt); }
     public String getExpiresUtc() { return DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(expiresAt) + "Z"; }
+    public String getCreatedLabel() { return EventTimes.label(createdAt); }
+    public String getConfirmedLabel() { return confirmedAt == null ? "" : EventTimes.label(confirmedAt); }
+    public String getCancelledLabel() { return cancelledAt == null ? "" : EventTimes.label(cancelledAt); }
 }
