@@ -13,6 +13,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.sql.Statement;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -253,6 +254,7 @@ class SqlServerFoundationIT {
 
     @Test
     void schemaAndSeedRerunsAreRefusedWithoutChangingSeedRows() throws Exception {
+        Map<String, TableSnapshot> before = applicationSnapshot();
         // Scripts own transactions. Run rerun checks on independent autocommit connections.
         for (String file : new String[]{"schema.sql", "seed.sql"}) {
             try (Connection isolated = source.getConnection(); Statement statement = isolated.createStatement()) {
@@ -261,9 +263,34 @@ class SqlServerFoundationIT {
                         () -> statement.execute(Files.readString(Path.of("database", file))));
                 assertEquals(file.equals("schema.sql") ? 51001 : 51002, error.getErrorCode());
             }
+            Map<String, TableSnapshot> after = applicationSnapshot();
+            for (var table : before.entrySet()) {
+                assertEquals(table.getValue(), after.get(table.getKey()),
+                        "Data changed in dbo." + table.getKey() + " after the refused " + file + " rerun.");
+            }
         }
-        assertEquals(3, scalar("SELECT COUNT(*) FROM dbo.users"));
-        assertEquals(0, scalar("SELECT COUNT(*) FROM dbo.bookings"));
-        assertEquals(16, scalar("SELECT COUNT(*) FROM dbo.event_seats"));
+    }
+
+    private record TableSnapshot(long rowCount, String digest) { }
+
+    private Map<String, TableSnapshot> applicationSnapshot() throws SQLException {
+        Map<String, TableSnapshot> snapshot = new LinkedHashMap<>();
+        // Hash every column in SQL; only counts/digests reach JDBC and assertion output.
+        try (Connection snapshotConnection = source.getConnection(); Statement statement = snapshotConnection.createStatement()) {
+            statement.setQueryTimeout(10);
+            for (String table : new String[]{"users", "categories", "venues", "seats", "events",
+                    "bookings", "event_seats", "booking_items", "payments"}) {
+                String relation = "dbo.[" + table + "]";
+                String sql = "SELECT COUNT_BIG(*) AS row_count,CONVERT(varchar(64),HASHBYTES('SHA2_256',COALESCE("
+                        + "(SELECT * FROM " + relation + " ORDER BY id FOR JSON PATH,INCLUDE_NULL_VALUES),N'[]')),2) AS digest FROM " + relation;
+                try (ResultSet rows = statement.executeQuery(sql)) {
+                    assertTrue(rows.next(), "Missing snapshot for " + relation + ".");
+                    String digest = rows.getString("digest");
+                    assertNotNull(digest, "Missing content digest for " + relation + ".");
+                    snapshot.put(table, new TableSnapshot(rows.getLong("row_count"), digest));
+                }
+            }
+        }
+        return Map.copyOf(snapshot);
     }
 }
