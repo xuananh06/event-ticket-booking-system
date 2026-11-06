@@ -1,0 +1,11 @@
+# Safe template: fill SQL login credentials only in the ignored database.properties.
+# Select an absolute file path with -Deventbooking.db.config=... in the JVM.
+# UTF-8 Java .properties syntax: double backslashes and escape leading password spaces.
+db.host=localhost
+db.port=1433
+db.name=event_booking_p1_test
+db.user=your_sql_login
+db.password=your_sql_password
+db.encrypt=true
+# Explicit local-development option for a self-signed certificate: true.
+db.trustServerCertificate=false
