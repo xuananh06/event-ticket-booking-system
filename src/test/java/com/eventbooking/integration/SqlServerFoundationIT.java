@@ -2,7 +2,6 @@ package com.eventbooking.integration;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.eventbooking.config.DataSourceFactory;
-import com.eventbooking.config.DatabaseSettings;
 import com.eventbooking.service.DatabaseProbe;
 
 import java.nio.file.Files;
@@ -34,19 +33,15 @@ class SqlServerFoundationIT {
 
     @BeforeEach
     void connectToExplicitlyDesignatedDatabase() throws Exception {
-        Map<String, String> environment = System.getenv();
-        String confirmation = environment.get("EVENT_TEST_DB_CONFIRM");
-        assertNotNull(confirmation, "Set EVENT_TEST_DB_CONFIRM to the dedicated test database name.");
-        assertEquals(environment.get("EVENT_DB_NAME"), confirmation, "Test database confirmation must match configuration.");
-        assertFalse(java.util.Set.of("master", "model", "msdb", "tempdb").contains(confirmation.toLowerCase(java.util.Locale.ROOT)));
-        source = DataSourceFactory.create(DatabaseSettings.fromEnvironment(environment).orElseThrow());
+        var settings = TestDatabaseConfiguration.load();
+        source = DataSourceFactory.create(settings);
         try {
             connection = source.getConnection();
         } catch (SQLException | UnsatisfiedLinkError error) {
-            fail("SQL Server test connection failed. Check local configuration and integrated-auth library; details suppressed.");
+            fail("SQL Server test connection failed. Check local SQL Authentication configuration; details suppressed.");
         }
         assertEquals(16, connection.getMetaData().getDatabaseMajorVersion(), "SQL Server 2022 is required.");
-        assertEquals(confirmation, connection.getCatalog());
+        assertTrue(settings.databaseName().equals(connection.getCatalog()), "Connection catalog must match the confirmed test database.");
         connection.setAutoCommit(false);
         execute("SET XACT_ABORT OFF; SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON; SET ANSI_PADDING ON; "
                 + "SET ANSI_WARNINGS ON; SET CONCAT_NULL_YIELDS_NULL ON; SET ARITHABORT ON; SET NUMERIC_ROUNDABORT OFF;");

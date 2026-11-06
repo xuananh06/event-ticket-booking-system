@@ -31,6 +31,11 @@ class AuthenticationHttpCheck {
 
     @Test
     void deployedAuthenticationContract() throws Exception {
+        String expectedSource = System.getProperty("auth.databaseSourceExpected");
+        if (expectedSource != null) {
+            assertEquals(expectedSource, com.eventbooking.config.DatabaseConfigLoader.load().source().name(),
+                    "The HTTP test JVM must use the selected database configuration source.");
+        }
         assertEquals("http", base.getScheme(), "Supply the isolated HTTP base URL.");
         assertEquals("127.0.0.1", base.getHost(), "HTTP checks target loopback only.");
         assertTrue(base.getPath().endsWith("/"));

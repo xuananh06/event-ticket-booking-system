@@ -1,7 +1,6 @@
 package com.eventbooking.integration;
 
 import com.eventbooking.config.DataSourceFactory;
-import com.eventbooking.config.DatabaseSettings;
 import com.eventbooking.dao.UserDao;
 import com.eventbooking.security.PasswordHasher;
 import com.eventbooking.service.AuthService;
@@ -12,9 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import javax.sql.DataSource;
 
@@ -30,14 +27,10 @@ final class TestDatabase implements AutoCloseable {
     private final List<String> ownedEmails = new ArrayList<>();
 
     TestDatabase() throws Exception {
-        var environment = System.getenv();
-        String confirmation = environment.get("EVENT_TEST_DB_CONFIRM");
-        assertNotNull(confirmation, "Set EVENT_TEST_DB_CONFIRM to a dedicated test database.");
-        assertEquals(environment.get("EVENT_DB_NAME"), confirmation, "Test database confirmation must match configuration.");
-        assertFalse(Set.of("master", "model", "msdb", "tempdb").contains(confirmation.toLowerCase(Locale.ROOT)));
-        source = DataSourceFactory.create(DatabaseSettings.fromEnvironment(environment).orElseThrow());
+        var settings = TestDatabaseConfiguration.load();
+        source = DataSourceFactory.create(settings);
         try (Connection connection = source.getConnection()) {
-            assertEquals(confirmation, connection.getCatalog());
+            assertTrue(settings.databaseName().equals(connection.getCatalog()), "Connection catalog must match the confirmed test database.");
             assertEquals(16, connection.getMetaData().getDatabaseMajorVersion(), "SQL Server 2022 is required.");
         } catch (SQLException | UnsatisfiedLinkError error) {
             fail("Test database connection failed; connection details suppressed.");

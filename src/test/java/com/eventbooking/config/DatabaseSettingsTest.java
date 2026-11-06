@@ -32,7 +32,9 @@ class DatabaseSettingsTest {
         assertEquals("localhost", source.getServerName());
         assertEquals("test_db", source.getDatabaseName());
         assertEquals(1433, source.getPortNumber());
-        assertEquals("  password spaces  ", settings.value("EVENT_DB_PASSWORD", ""));
+        assertEquals("  password spaces  ", settings.value("db.password", ""));
+        assertEquals("test_user", source.getUser());
+        assertEquals("SqlPassword", source.getAuthentication());
         assertTrue(settings.encrypt());
         assertFalse(source.getTrustServerCertificate());
         assertEquals(5, source.getLoginTimeout());
@@ -58,11 +60,30 @@ class DatabaseSettingsTest {
     }
 
     @Test
-    void integratedAuthenticationDoesNotRequireOrAcceptSqlCredentials() {
-        Map<String, String> input = new HashMap<>(Map.of("EVENT_DB_HOST", "localhost", "EVENT_DB_NAME", "test_db",
+    void onlySqlAuthenticationIsAcceptedAndUnknownEnvironmentKeysAreRejected() {
+        Map<String, String> integrated = new HashMap<>(Map.of("EVENT_DB_HOST", "localhost", "EVENT_DB_NAME", "test_db",
                 "EVENT_DB_AUTH", "windows-integrated"));
-        assertNotNull(DataSourceFactory.create(DatabaseSettings.fromEnvironment(input).orElseThrow()));
-        input.put("EVENT_DB_PASSWORD", "mixed-mode-value");
-        assertThrows(IllegalArgumentException.class, () -> DatabaseSettings.fromEnvironment(input));
+        var error = assertThrows(IllegalArgumentException.class, () -> DatabaseSettings.fromEnvironment(integrated));
+        assertTrue(error.getMessage().contains("Only SQL Server Authentication"));
+        assertFalse(error.getMessage().contains("windows-integrated"));
+        Map<String, String> unknown = valid();
+        unknown.put("EVENT_DB_TRUST_CERTIFICATE", "private-value");
+        error = assertThrows(IllegalArgumentException.class, () -> DatabaseSettings.fromEnvironment(unknown));
+        assertTrue(error.getMessage().contains("EVENT_DB_TRUST_CERTIFICATE"));
+        assertFalse(error.getMessage().contains("private-value"));
+    }
+
+    @Test
+    void sqlCredentialsAreRequiredWithoutNormalizingTheirDecodedContent() {
+        for (String key : new String[]{"EVENT_DB_HOST", "EVENT_DB_NAME", "EVENT_DB_USER", "EVENT_DB_PASSWORD"}) {
+            for (boolean missing : new boolean[]{true, false}) {
+                Map<String, String> input = valid();
+                if (missing) { input.remove(key); } else { input.put(key, ""); }
+                var error = assertThrows(IllegalArgumentException.class, () -> DatabaseSettings.fromEnvironment(input));
+                assertTrue(error.getMessage().contains(key));
+            }
+        }
+        Map<String, String> input = valid(); input.put("EVENT_DB_PASSWORD", "   ");
+        assertEquals("   ", DatabaseSettings.fromEnvironment(input).orElseThrow().value("db.password", ""));
     }
 }

@@ -55,8 +55,14 @@ public final class ApplicationInitializer implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent event) {
         ServletContext context = event.getServletContext();
-        Optional<DataSource> source = DatabaseSettings.fromEnvironment(System.getenv())
-                .map(DataSourceFactory::create);
+        DatabaseConfigLoader.Loaded configuration;
+        try { configuration = DatabaseConfigLoader.load(); }
+        catch (IllegalArgumentException invalid) {
+            context.log("Database configuration error: " + invalid.getMessage());
+            throw new IllegalStateException("Database configuration error: " + invalid.getMessage());
+        }
+        context.log("Database configuration source: " + configuration.source().name());
+        Optional<DataSource> source = configuration.settings().map(DataSourceFactory::create);
         DatabaseProbe probe = new DatabaseProbe(source);
         DatabaseProbe.Status status = probe.check();
         context.log("Database startup check: " + status.name());
