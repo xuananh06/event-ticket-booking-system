@@ -1,0 +1,22 @@
+<%@ page pageEncoding="UTF-8" %>
+<c:url var="historyUrl" value="/customer/bookings">
+    <c:param name="page" value="${historyPage}"/>
+    <c:param name="size" value="${historySize}"/>
+    <c:param name="status" value="${historyStatus}"/>
+</c:url>
+<c:url var="cancelUrl" value="/customer/bookings/cancel">
+    <c:param name="bookingId" value="${booking.id}"/>
+    <c:param name="page" value="${historyPage}"/>
+    <c:param name="size" value="${historySize}"/>
+    <c:param name="status" value="${historyStatus}"/>
+    <c:param name="paymentPage" value="${paymentPage}"/>
+    <c:param name="paymentSize" value="${paymentSize}"/>
+</c:url>
+<c:url var="detailUrl" value="/customer/bookings/detail">
+    <c:param name="bookingId" value="${booking.id}"/>
+    <c:param name="page" value="${historyPage}"/>
+    <c:param name="size" value="${historySize}"/>
+    <c:param name="status" value="${historyStatus}"/>
+    <c:param name="paymentPage" value="${paymentPage}"/>
+    <c:param name="paymentSize" value="${paymentSize}"/>
+</c:url>

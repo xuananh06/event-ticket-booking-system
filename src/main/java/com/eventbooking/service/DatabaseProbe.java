@@ -30,7 +30,7 @@ public final class DatabaseProbe {
                 return result.next() && result.getInt(1) == 1 ? Status.AVAILABLE : Status.UNAVAILABLE;
             }
         } catch (SQLException | UnsatisfiedLinkError exception) {
-            // Includes missing integrated-auth native library; never log driver details.
+            // Connection setup failures remain generic; never log driver details.
             return Status.UNAVAILABLE;
         }
     }

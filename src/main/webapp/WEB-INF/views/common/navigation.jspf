@@ -25,6 +25,10 @@
                 <c:url var="manageEventsUrl" value="/organizer/events"/>
                 <a class="nav-link" href="<c:out value='${manageEventsUrl}'/>">Manage events</a>
             </c:if>
+            <c:if test="${currentUser.role == 'CUSTOMER'}">
+                <c:url var="bookingsUrl" value="/customer/bookings"/>
+                <a class="nav-link" href="<c:out value='${bookingsUrl}'/>">My bookings</a>
+            </c:if>
             <c:choose>
                 <c:when test="${not empty currentUser}">
                     <c:url var="accountHomeUrl" value="${currentUser.role.homePath}"/>

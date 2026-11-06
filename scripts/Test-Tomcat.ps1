@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$TomcatHome,
     [string]$JavaHome = $env:JAVA_HOME,
-    [string]$JdbcNativeDirectory,
+    [string]$DatabaseConfigFile,
     [ValidateSet('NOT_CONFIGURED', 'AVAILABLE', 'UNAVAILABLE')]
     [string]$ExpectedDatabaseStatus = 'NOT_CONFIGURED',
     [ValidatePattern('^[a-zA-Z0-9][a-zA-Z0-9_-]{0,49}$')]
@@ -13,6 +13,17 @@ param(
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Net.Http
 $repository = Split-Path -Parent $PSScriptRoot
+$selectedConfig = $null
+if ($PSBoundParameters.ContainsKey('DatabaseConfigFile')) {
+    if ([string]::IsNullOrWhiteSpace($DatabaseConfigFile) -or $DatabaseConfigFile -notmatch '^(?:[A-Za-z]:[\\/]|[\\/]{2}[^\\/]+[\\/][^\\/]+[\\/])') {
+        throw 'DatabaseConfigFile requires an absolute file path.'
+    }
+    try {
+        if (-not (Test-Path -LiteralPath $DatabaseConfigFile -PathType Leaf)) { throw 'Invalid file.' }
+        $selectedConfig = (Resolve-Path -LiteralPath $DatabaseConfigFile -ErrorAction Stop).ProviderPath
+    } catch { throw 'The selected database configuration file is missing or unreadable.' }
+}
+$expectedSource = if ($null -ne $selectedConfig) { 'FILE' } elseif (@(Get-ChildItem Env:EVENT_DB_*).Count -gt 0) { 'ENVIRONMENT' } else { 'NONE' }
 $java = Join-Path $JavaHome 'bin\java.exe'
 $homeDirectory = (Resolve-Path -LiteralPath $TomcatHome).Path
 $war = Join-Path $repository 'target\event-booking.war'
@@ -59,8 +70,8 @@ $arguments = @(
     ('"-Djava.util.logging.config.file={0}\conf\logging.properties"' -f $baseDirectory),
     '-Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager'
 )
-if ($JdbcNativeDirectory) {
-    $arguments += ('"-Djava.library.path={0}"' -f (Resolve-Path -LiteralPath $JdbcNativeDirectory).Path)
+if ($null -ne $selectedConfig) {
+    $arguments += ('"-Deventbooking.db.config={0}"' -f $selectedConfig)
 }
 $arguments += @('-cp', ('"{0}\bin\bootstrap.jar;{0}\bin\tomcat-juli.jar"' -f $homeDirectory),
     'org.apache.catalina.startup.Bootstrap', 'start')
@@ -101,6 +112,12 @@ try {
         if ($null -eq $html) { Start-Sleep -Milliseconds 300 }
     } while ($null -eq $html -and [DateTime]::UtcNow -lt $deadline)
     if ($null -eq $html) { throw 'HTTP smoke request did not return 200 before the deadline.' }
+    $serverLogs = (Get-ChildItem -LiteralPath (Join-Path $baseDirectory 'logs') -Filter '*.log' -File | ForEach-Object {
+        Get-Content -Raw -LiteralPath $_.FullName -ErrorAction SilentlyContinue
+    }) -join "`n"
+    if ($serverLogs -notmatch ('Database configuration source: ' + $expectedSource + '\b')) {
+        throw 'The actual Tomcat JVM did not report the expected database configuration source.'
+    }
     Set-Content -LiteralPath (Join-Path $baseDirectory 'logs\home-response.html') -Value $html -Encoding UTF8
 
     # Read the source explicitly as UTF-8, including on Windows PowerShell.
@@ -143,9 +160,10 @@ try {
             $env:JAVA_HOME = $JavaHome
             $env:Path = "$JavaHome\bin;$env:Path"
             $mavenArguments = @('-B', 'test-compile', 'failsafe:integration-test', 'failsafe:verify', '-Phttp-it',
-                "-Dauth.baseUrl=$url", "-Dauth.databaseExpected=$ExpectedDatabaseStatus", '-Dauth.expirySeconds=5')
-            if ($JdbcNativeDirectory) {
-                $mavenArguments += ('-DargLine=-Djava.library.path=' + (Resolve-Path -LiteralPath $JdbcNativeDirectory).Path)
+                "-Dauth.baseUrl=$url", "-Dauth.databaseExpected=$ExpectedDatabaseStatus", '-Dauth.expirySeconds=5',
+                "-Dauth.databaseSourceExpected=$expectedSource")
+            if ($null -ne $selectedConfig) {
+                $mavenArguments += ('-Deventbooking.db.config=' + $selectedConfig)
             }
             & mvn @mavenArguments
             if ($LASTEXITCODE -ne 0) { throw 'Authentication HTTP checks failed. Inspect target/failsafe-reports.' }
@@ -155,7 +173,7 @@ try {
             $env:Path = $previousPath
         }
     }
-    [pscustomobject]@{ Result = 'PASS'; Tomcat = '10.1.44'; Java = '17'; Database = $ExpectedDatabaseStatus; Evidence = $baseDirectory }
+    [pscustomobject]@{ Result = 'PASS'; Tomcat = '10.1.44'; Java = '17'; Database = $ExpectedDatabaseStatus; ConfigurationSource = $expectedSource; Evidence = $baseDirectory }
 } finally {
     $client.Dispose()
     if ($null -ne $serverProcess) {

@@ -1,0 +1,6 @@
+<%@ page pageEncoding="UTF-8" %>
+<input type="hidden" name="page" value="${historyPage}">
+<input type="hidden" name="size" value="${historySize}">
+<input type="hidden" name="status" value="<c:out value='${historyStatus}'/>">
+<input type="hidden" name="paymentPage" value="${paymentPage}">
+<input type="hidden" name="paymentSize" value="${paymentSize}">

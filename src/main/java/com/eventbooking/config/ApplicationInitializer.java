@@ -14,6 +14,11 @@ import com.eventbooking.controller.OrganizerEventServlet;
 import com.eventbooking.controller.OrganizerInventoryServlet;
 import com.eventbooking.controller.PublicInventoryServlet;
 import com.eventbooking.controller.CustomerBookingServlet;
+import com.eventbooking.controller.CustomerPaymentServlet;
+import com.eventbooking.dao.BookingHistoryDao;
+import com.eventbooking.dao.PaymentDao;
+import com.eventbooking.service.BookingHistoryService;
+import com.eventbooking.service.PaymentService;
 import com.eventbooking.dao.BookingDao;
 import com.eventbooking.service.BookingService;
 import com.eventbooking.dao.InventoryDao;
@@ -50,8 +55,14 @@ public final class ApplicationInitializer implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent event) {
         ServletContext context = event.getServletContext();
-        Optional<DataSource> source = DatabaseSettings.fromEnvironment(System.getenv())
-                .map(DataSourceFactory::create);
+        DatabaseConfigLoader.Loaded configuration;
+        try { configuration = DatabaseConfigLoader.load(); }
+        catch (IllegalArgumentException invalid) {
+            context.log("Database configuration error: " + invalid.getMessage());
+            throw new IllegalStateException("Database configuration error: " + invalid.getMessage());
+        }
+        context.log("Database configuration source: " + configuration.source().name());
+        Optional<DataSource> source = configuration.settings().map(DataSourceFactory::create);
         DatabaseProbe probe = new DatabaseProbe(source);
         DatabaseProbe.Status status = probe.check();
         context.log("Database startup check: " + status.name());
@@ -86,7 +97,14 @@ public final class ApplicationInitializer implements ServletContextListener {
         context.addServlet("publicEventDetail", new PublicEventServlet(catalog, true)).addMapping("/events/detail");
         context.addServlet("publicInventory", new PublicInventoryServlet(new PublicInventoryService(new JdbcAccess(source), new EventDao(), new InventoryDao()))).addMapping("/events/seats");
         context.addServlet("customerBooking", new CustomerBookingServlet(new BookingService(new JdbcAccess(source), new BookingDao())))
-                .addMapping("/customer/events/seats", "/customer/bookings/hold", "/customer/bookings/checkout", "/customer/bookings/expire");
+                .addMapping("/customer/events/seats", "/customer/bookings/hold", "/customer/bookings/expire");
+        JdbcAccess bookingAccess = new JdbcAccess(source);
+        BookingDao bookingDao = new BookingDao();
+        PaymentDao paymentDao = new PaymentDao();
+        context.addServlet("customerPayment", new CustomerPaymentServlet(
+                new BookingHistoryService(bookingAccess, bookingDao, paymentDao, new BookingHistoryDao()),
+                new PaymentService(bookingAccess, bookingDao, paymentDao)))
+                .addMapping("/customer/bookings", "/customer/bookings/detail", "/customer/bookings/checkout", "/customer/bookings/pay", "/customer/bookings/cancel");
         for (ReferenceServlet.Kind kind : ReferenceServlet.Kind.values()) {
             context.addServlet("admin" + kind.name(), new ReferenceServlet(references, kind))
                     .addMapping("/admin/" + kind.name().toLowerCase(java.util.Locale.ROOT));

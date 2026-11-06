@@ -2,7 +2,6 @@ package com.eventbooking.integration;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.eventbooking.config.DataSourceFactory;
-import com.eventbooking.config.DatabaseSettings;
 import com.eventbooking.service.DatabaseProbe;
 
 import java.nio.file.Files;
@@ -13,6 +12,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.sql.Statement;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,19 +33,15 @@ class SqlServerFoundationIT {
 
     @BeforeEach
     void connectToExplicitlyDesignatedDatabase() throws Exception {
-        Map<String, String> environment = System.getenv();
-        String confirmation = environment.get("EVENT_TEST_DB_CONFIRM");
-        assertNotNull(confirmation, "Set EVENT_TEST_DB_CONFIRM to the dedicated test database name.");
-        assertEquals(environment.get("EVENT_DB_NAME"), confirmation, "Test database confirmation must match configuration.");
-        assertFalse(java.util.Set.of("master", "model", "msdb", "tempdb").contains(confirmation.toLowerCase(java.util.Locale.ROOT)));
-        source = DataSourceFactory.create(DatabaseSettings.fromEnvironment(environment).orElseThrow());
+        var settings = TestDatabaseConfiguration.load();
+        source = DataSourceFactory.create(settings);
         try {
             connection = source.getConnection();
         } catch (SQLException | UnsatisfiedLinkError error) {
-            fail("SQL Server test connection failed. Check local configuration and integrated-auth library; details suppressed.");
+            fail("SQL Server test connection failed. Check local SQL Authentication configuration; details suppressed.");
         }
         assertEquals(16, connection.getMetaData().getDatabaseMajorVersion(), "SQL Server 2022 is required.");
-        assertEquals(confirmation, connection.getCatalog());
+        assertTrue(settings.databaseName().equals(connection.getCatalog()), "Connection catalog must match the confirmed test database.");
         connection.setAutoCommit(false);
         execute("SET XACT_ABORT OFF; SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON; SET ANSI_PADDING ON; "
                 + "SET ANSI_WARNINGS ON; SET CONCAT_NULL_YIELDS_NULL ON; SET ARITHABORT ON; SET NUMERIC_ROUNDABORT OFF;");
@@ -253,6 +249,7 @@ class SqlServerFoundationIT {
 
     @Test
     void schemaAndSeedRerunsAreRefusedWithoutChangingSeedRows() throws Exception {
+        Map<String, TableSnapshot> before = applicationSnapshot();
         // Scripts own transactions. Run rerun checks on independent autocommit connections.
         for (String file : new String[]{"schema.sql", "seed.sql"}) {
             try (Connection isolated = source.getConnection(); Statement statement = isolated.createStatement()) {
@@ -261,9 +258,34 @@ class SqlServerFoundationIT {
                         () -> statement.execute(Files.readString(Path.of("database", file))));
                 assertEquals(file.equals("schema.sql") ? 51001 : 51002, error.getErrorCode());
             }
+            Map<String, TableSnapshot> after = applicationSnapshot();
+            for (var table : before.entrySet()) {
+                assertEquals(table.getValue(), after.get(table.getKey()),
+                        "Data changed in dbo." + table.getKey() + " after the refused " + file + " rerun.");
+            }
         }
-        assertEquals(3, scalar("SELECT COUNT(*) FROM dbo.users"));
-        assertEquals(0, scalar("SELECT COUNT(*) FROM dbo.bookings"));
-        assertEquals(16, scalar("SELECT COUNT(*) FROM dbo.event_seats"));
+    }
+
+    private record TableSnapshot(long rowCount, String digest) { }
+
+    private Map<String, TableSnapshot> applicationSnapshot() throws SQLException {
+        Map<String, TableSnapshot> snapshot = new LinkedHashMap<>();
+        // Hash every column in SQL; only counts/digests reach JDBC and assertion output.
+        try (Connection snapshotConnection = source.getConnection(); Statement statement = snapshotConnection.createStatement()) {
+            statement.setQueryTimeout(10);
+            for (String table : new String[]{"users", "categories", "venues", "seats", "events",
+                    "bookings", "event_seats", "booking_items", "payments"}) {
+                String relation = "dbo.[" + table + "]";
+                String sql = "SELECT COUNT_BIG(*) AS row_count,CONVERT(varchar(64),HASHBYTES('SHA2_256',COALESCE("
+                        + "(SELECT * FROM " + relation + " ORDER BY id FOR JSON PATH,INCLUDE_NULL_VALUES),N'[]')),2) AS digest FROM " + relation;
+                try (ResultSet rows = statement.executeQuery(sql)) {
+                    assertTrue(rows.next(), "Missing snapshot for " + relation + ".");
+                    String digest = rows.getString("digest");
+                    assertNotNull(digest, "Missing content digest for " + relation + ".");
+                    snapshot.put(table, new TableSnapshot(rows.getLong("row_count"), digest));
+                }
+            }
+        }
+        return Map.copyOf(snapshot);
     }
 }
