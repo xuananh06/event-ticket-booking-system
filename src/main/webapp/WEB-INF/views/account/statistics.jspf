@@ -1,0 +1,115 @@
+<section class="mt-4" aria-labelledby="statistics-heading">
+    <h2 id="statistics-heading" class="h3">All-time statistics</h2>
+    <c:choose>
+        <c:when test="${currentUser.role == 'CUSTOMER'}">
+            <p class="text-secondary">Your bookings across all events. Expired includes pending holds whose deadline has passed; confirmed bookings keep their status after the original hold deadline.</p>
+            <c:url var="allBookingsUrl" value="/customer/bookings"/>
+            <div class="row g-3">
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h6"><a href="<c:out value='${allBookingsUrl}'/>">Total bookings</a></h3>
+                            <p id="metric-total-bookings" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.totalBookings}"/></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <c:url var="pendingBookingsUrl" value="/customer/bookings"><c:param name="status" value="PENDING"/></c:url>
+                            <h3 class="h6"><a href="<c:out value='${pendingBookingsUrl}'/>">Pending bookings</a></h3>
+                            <p id="metric-pending-bookings" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.pendingBookings}"/></p>
+                            <p class="small text-secondary mb-0">Unexpired temporary holds.</p>
+                        </div>
+                    </div>
+                </article>
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <c:url var="confirmedBookingsUrl" value="/customer/bookings"><c:param name="status" value="CONFIRMED"/></c:url>
+                            <h3 class="h6"><a href="<c:out value='${confirmedBookingsUrl}'/>">Confirmed bookings</a></h3>
+                            <p id="metric-confirmed-bookings" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.confirmedBookings}"/></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <c:url var="expiredBookingsUrl" value="/customer/bookings"><c:param name="status" value="EXPIRED"/></c:url>
+                            <h3 class="h6"><a href="<c:out value='${expiredBookingsUrl}'/>">Expired bookings</a></h3>
+                            <p id="metric-expired-bookings" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.expiredBookings}"/></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <c:url var="cancelledBookingsUrl" value="/customer/bookings"><c:param name="status" value="CANCELLED"/></c:url>
+                            <h3 class="h6"><a href="<c:out value='${cancelledBookingsUrl}'/>">Cancelled bookings</a></h3>
+                            <p id="metric-cancelled-bookings" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.cancelledBookings}"/></p>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </c:when>
+        <c:when test="${currentUser.role == 'ORGANIZER'}">
+            <p class="text-secondary">Only your events and their recorded sales are included, including historical events and inactive related records.</p>
+            <c:url var="statisticsEventsUrl" value="/organizer/events"/>
+            <p><a href="<c:out value='${statisticsEventsUrl}'/>">Manage your events</a></p>
+            <div class="row g-3">
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h6">Total events</h3>
+                            <p id="metric-total-events" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.totalEvents}"/></p>
+                            <p class="small text-secondary mb-0">All stored event statuses.</p>
+                        </div>
+                    </div>
+                </article>
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h6">Upcoming published events</h3>
+                            <p id="metric-upcoming-published-events" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.upcomingPublishedEvents}"/></p>
+                            <p class="small text-secondary mb-0">Published and not yet started; this does not guarantee purchase eligibility.</p>
+                        </div>
+                    </div>
+                </article>
+                <%@ include file="sales-statistics.jspf" %>
+            </div>
+        </c:when>
+        <c:when test="${currentUser.role == 'ADMIN'}">
+            <p class="text-secondary">System-wide totals across all stored accounts, events and bookings, including inactive and historical records.</p>
+            <c:url var="statisticsAccountsUrl" value="/admin/users"/>
+            <p><a href="<c:out value='${statisticsAccountsUrl}'/>">Manage accounts</a></p>
+            <div class="row g-3">
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h6">Total accounts</h3>
+                            <p id="metric-total-accounts" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.totalAccounts}"/></p>
+                            <p class="small text-secondary mb-0">Includes inactive accounts and your Admin account.</p>
+                        </div>
+                    </div>
+                </article>
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h6">Total events</h3>
+                            <p id="metric-total-events" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.totalEvents}"/></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="col-12 col-sm-6 col-xl-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h3 class="h6">Total bookings</h3>
+                            <p id="metric-total-bookings" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.totalBookings}"/></p>
+                        </div>
+                    </div>
+                </article>
+                <%@ include file="sales-statistics.jspf" %>
+            </div>
+        </c:when>
+    </c:choose>
+</section>

@@ -6,6 +6,8 @@ import com.eventbooking.controller.LoginServlet;
 import com.eventbooking.controller.LogoutServlet;
 import com.eventbooking.controller.RegisterServlet;
 import com.eventbooking.controller.RoleHomeServlet;
+import com.eventbooking.dao.StatisticsDao;
+import com.eventbooking.service.StatisticsService;
 import com.eventbooking.controller.ReferenceServlet;
 import com.eventbooking.controller.AdminUserServlet;
 import com.eventbooking.dao.AdminUserDao;
@@ -109,8 +111,9 @@ public final class ApplicationInitializer implements ServletContextListener {
             context.addServlet("admin" + kind.name(), new ReferenceServlet(references, kind))
                     .addMapping("/admin/" + kind.name().toLowerCase(java.util.Locale.ROOT));
         }
+        StatisticsService statistics = new StatisticsService(source, new StatisticsDao());
         for (Role role : Role.values()) {
-            context.addServlet(role.name().toLowerCase(java.util.Locale.ROOT) + "Home", new RoleHomeServlet(role)).addMapping(role.getHomePath());
+            context.addServlet(role.name().toLowerCase(java.util.Locale.ROOT) + "Home", new RoleHomeServlet(role, statistics)).addMapping(role.getHomePath());
         }
     }
 }
