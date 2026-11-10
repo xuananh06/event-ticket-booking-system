@@ -13,17 +13,20 @@
                 <%@ include file="../common/messages.jspf" %>
                 <%@ include file="booking-links.jspf" %>
                 <h2 class="h4"><c:out value="${booking.eventTitle}"/></h2>
+                <p class="booking-total">Stored total (VND): <strong id="stored-total"><c:out value="${booking.totalLabel}"/></strong></p>
                 <dl class="row mt-4">
                     <dt class="col-sm-4">Booking code</dt>
                     <dd class="col-sm-8"><c:out value="${booking.code}"/></dd>
                     <dt class="col-sm-4">State</dt>
-                    <dd class="col-sm-8" id="booking-state"><c:out value="${summary.state}"/></dd>
+                    <dd class="col-sm-8 fw-bold" id="booking-state"><c:out value="${summary.state}"/></dd>
                     <dt class="col-sm-4">Quantity</dt>
                     <dd class="col-sm-8"><c:out value="${summary.items.size()}"/></dd>
                     <dt class="col-sm-4">Original hold deadline</dt>
                     <dd class="col-sm-8"><time datetime="<c:out value='${booking.expiresUtc}'/>"><c:out value="${booking.expiresLabel}"/> (Asia/Bangkok)</time></dd>
-                    <dt class="col-sm-4">Remaining at server check</dt>
-                    <dd class="col-sm-8"><c:out value="${summary.remainingSeconds}"/> seconds</dd>
+                    <c:if test="${summary.state == 'PENDING'}">
+                        <dt class="col-sm-4">Remaining at server check</dt>
+                        <dd class="col-sm-8"><c:out value="${summary.remainingSeconds}"/> seconds</dd>
+                    </c:if>
                     <dt class="col-sm-4">Created (Asia/Bangkok)</dt>
                     <dd class="col-sm-8"><c:out value="${booking.createdLabel}"/></dd>
                     <c:if test="${not empty booking.confirmedLabel}">
@@ -50,9 +53,10 @@
                     </c:otherwise>
                 </c:choose>
                 <p>Refreshing or signing in again does not extend the original deadline. Remaining time is checked by the server; loading this page does not renew or confirm a reservation.</p>
-                <div class="table-responsive">
-                    <table class="table">
-                        <caption>Reserved seat and unit-price snapshots</caption>
+                <p id="reserved-scroll-help" class="table-scroll-hint">Scroll the table horizontally when columns do not fit.</p>
+                <div class="table-responsive table-scroll" role="region" tabindex="0" aria-labelledby="reserved-caption" aria-describedby="reserved-scroll-help">
+                    <table class="table reserved-table">
+                        <caption id="reserved-caption" class="caption-top">Reserved seat and unit-price snapshots</caption>
                         <thead>
                             <tr>
                                 <th scope="col">Seat</th>
@@ -63,14 +67,14 @@
                             <c:forEach var="item" items="${summary.items}">
                                 <tr>
                                     <td><c:out value="${item.seatLabel}"/></td>
-                                    <td><c:out value="${item.priceLabel}"/></td>
+                                    <td class="money"><c:out value="${item.priceLabel}"/></td>
                                 </tr>
                             </c:forEach>
                         </tbody>
                         <tfoot>
                             <tr>
                                 <th scope="row">Total (VND)</th>
-                                <td><c:out value="${booking.totalLabel}"/></td>
+                                <td class="money fw-bold"><c:out value="${booking.totalLabel}"/></td>
                             </tr>
                         </tfoot>
                     </table>
