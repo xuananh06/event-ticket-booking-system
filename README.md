@@ -30,6 +30,10 @@ Planned capabilities, not yet available as application workflows:
 
 Role home pages retain account information and navigation alongside actual all-time statistics. Customers enter reservation selection from an eligible event's public seat page.
 
+Navigation marks the current page or section and supports keyboard focus and skipping to the main content. Validation errors appear beside their fields; when local JavaScript is available, the error summary receives focus and links to fields for correction. Passwords are never redisplayed after validation.
+
+Wide tables retain all columns and actions in a labelled horizontal scroll region. Focus the region and use the arrow keys when needed. Seat checkboxes have visible labels, and selection quantity and the exact provisional total appear above the seat table. The server remains authoritative for availability, prices and hold deadlines; ordinary reservation and payment forms also work without JavaScript.
+
 ## Requirements
 
 - JDK 17 and Maven 3.6.3 or later. Confirm `java -version` and `mvn -version` use Java 17.
