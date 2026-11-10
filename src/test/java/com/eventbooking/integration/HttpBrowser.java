@@ -74,6 +74,18 @@ final class HttpBrowser {
         return m.group(1);
     }
 
+    static void invalidField(HttpResponse<String> response, String id, String errorId) {
+        Matcher control = Pattern.compile("<(?:input|select|textarea)\\b[^>]*\\bid=\""
+                + Pattern.quote(id) + "\"[^>]*>").matcher(response.body());
+        assertTrue(control.find(), "The invalid field must remain available for correction.");
+        assertTrue(control.group().contains("aria-invalid=\"true\""), "The field must expose its invalid state.");
+        Matcher description = Pattern.compile("aria-describedby=\"([^\"]*)\"").matcher(control.group());
+        assertTrue(description.find(), "The invalid field must reference its error.");
+        assertTrue(Arrays.asList(description.group(1).split("\\s+")).contains(errorId));
+        assertTrue(response.body().contains("id=\"" + errorId + "\""), "The referenced error must exist.");
+        assertTrue(response.body().contains("id=\"validation-summary\""));
+    }
+
     record Form(String action, String token) {
         Map<String, String> fields(String... fields) {
             Map<String, String> values = HttpBrowser.fields(fields);

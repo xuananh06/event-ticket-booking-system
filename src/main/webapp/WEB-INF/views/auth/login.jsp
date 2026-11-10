@@ -19,7 +19,7 @@
                         <label class="form-label" for="email">Email address</label>
                         <input
                             class="form-control"
-                            id="email"
+                            id="email" aria-invalid="${not empty errors.email}"
                             name="email"
                             type="email"
                             autocomplete="username"
@@ -33,7 +33,7 @@
                         <label class="form-label" for="password">Password</label>
                         <input
                             class="form-control"
-                            id="password"
+                            id="password" aria-invalid="${not empty errors.password}"
                             name="password"
                             type="password"
                             autocomplete="current-password"

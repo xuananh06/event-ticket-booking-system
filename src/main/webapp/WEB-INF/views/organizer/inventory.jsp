@@ -38,12 +38,15 @@
                         <input
                             class="form-control mb-3"
                             id="initial-price"
+                            aria-describedby="price-format-help initial-price-error"
+                            aria-invalid="${param.action == 'generate' and not empty errors.price}"
                             name="price"
                             inputmode="decimal"
                             maxlength="64"
                             required
                             value="<c:out value='${priceValue}'/>">
-                        <p class="form-text">An explicit nonnegative decimal with at most two fractional digits is required. Use 0 for a free seat.</p>
+                        <div id="initial-price-error" class="field-error"><c:if test="${param.action == 'generate'}"><c:out value="${errors.price}"/></c:if></div>
+                        <p id="price-format-help" class="form-text">An explicit nonnegative decimal with at most two fractional digits is required. Use 0 for a free seat.</p>
                         <button class="btn btn-primary" type="submit">Generate missing seats</button>
                     </form>
                 </section>
@@ -60,11 +63,15 @@
                         <input
                             class="form-control mb-3"
                             id="batch-price"
+                            aria-describedby="price-format-help batch-price-error"
+                            aria-invalid="${param.action == 'price' and not empty errors.price}"
                             name="price"
                             inputmode="decimal"
                             maxlength="64"
                             required
                             value="<c:out value='${priceValue}'/>">
+                        <div id="batch-price-error" class="field-error"><c:if test="${param.action == 'price'}"><c:out value="${errors.price}"/></c:if></div>
+                        <div id="inventory-selection-error" class="field-error"><c:out value="${errors.eventSeatId}"/></div>
                         <button class="btn btn-primary" type="submit">Update selected seats</button>
                     </form>
                 </section>
@@ -85,9 +92,12 @@
                                     name="confirmation"
                                     value="publish"
                                     id="confirm-publication"
+                                    aria-describedby="publication-error"
+                                    aria-invalid="${not empty errors.confirmation}"
                                     required>
                                 <label class="form-check-label" for="confirm-publication">I confirm that the event details, inventory and prices are final.</label>
                             </div>
+                            <div id="publication-error" class="field-error"><c:out value="${errors.confirmation}"/></div>
                             <button class="btn btn-primary" type="submit">Publish event</button>
                         </form>
                     </c:when>

@@ -26,9 +26,10 @@
                 </div>
                 <button class="btn btn-primary" type="submit">Filter bookings</button>
             </form>
-            <div class="table-responsive">
-                <table class="table">
-                    <caption>Your reservations, newest first</caption>
+            <p id="bookings-scroll-help" class="table-scroll-hint">Scroll the table horizontally when columns do not fit.</p>
+            <div class="table-responsive table-scroll" role="region" tabindex="0" aria-labelledby="bookings-caption" aria-describedby="bookings-scroll-help">
+                <table class="table table-wide">
+                    <caption id="bookings-caption" class="caption-top">Your reservations, newest first</caption>
                     <thead>
                         <tr>
                             <th scope="col">Booking</th>
@@ -51,8 +52,8 @@
                                 <td><a href="<c:out value='${bookingUrl}'/>"><c:out value="${entry.booking.code}"/></a></td>
                                 <td><c:out value="${entry.booking.eventTitle}"/></td>
                                 <td><c:out value="${entry.quantity}"/></td>
-                                <td><c:out value="${entry.booking.totalLabel}"/></td>
-                                <td><c:out value="${entry.state}"/></td>
+                                <td class="money"><c:out value="${entry.booking.totalLabel}"/></td>
+                                <td class="state-value"><c:out value="${entry.state}"/></td>
                                 <td><c:out value="${entry.booking.createdLabel}"/></td>
                             </tr>
                         </c:forEach>

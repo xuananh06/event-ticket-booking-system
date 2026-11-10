@@ -1,3 +1,4 @@
+<c:set var="navigationPath" value="${requestScope['jakarta.servlet.forward.servlet_path'] == null ? pageContext.request.servletPath : requestScope['jakarta.servlet.forward.servlet_path']}"/>
 <c:url var="publicHomeUrl" value="/"/>
 <c:url var="loginUrl" value="/login"/>
 <c:url var="registerUrl" value="/register"/>
@@ -8,39 +9,39 @@
     <nav
         class="container d-flex flex-wrap align-items-center justify-content-between gap-3 py-3"
         aria-label="Main navigation">
-        <a class="brand" href="<c:out value='${publicHomeUrl}'/>"><span class="brand-mark" aria-hidden="true">C</span>Campus Events</a>
+        <a class="brand" href="<c:out value='${publicHomeUrl}'/>" aria-current="${empty navigationPath ? 'page' : 'false'}"><span class="brand-mark" aria-hidden="true">C</span>Campus Events</a>
         <div class="d-flex flex-wrap align-items-center gap-3">
-            <a class="nav-link" href="<c:out value='${browseUrl}'/>">Browse events</a>
+            <a class="nav-link" href="<c:out value='${browseUrl}'/>" aria-current="${navigationPath == '/events' ? 'page' : (navigationPath.startsWith('/events/') ? 'location' : 'false')}">Browse events</a>
             <c:if test="${currentUser.role == 'ADMIN'}">
                 <c:url var="categoriesUrl" value="/admin/categories"/>
-                <a class="nav-link" href="<c:out value='${categoriesUrl}'/>">Categories</a>
+                <a class="nav-link" href="<c:out value='${categoriesUrl}'/>" aria-current="${navigationPath == '/admin/categories' ? 'page' : 'false'}">Categories</a>
                 <c:url var="venuesUrl" value="/admin/venues"/>
-                <a class="nav-link" href="<c:out value='${venuesUrl}'/>">Venues</a>
+                <a class="nav-link" href="<c:out value='${venuesUrl}'/>" aria-current="${navigationPath == '/admin/venues' ? 'page' : 'false'}">Venues</a>
                 <c:url var="seatsUrl" value="/admin/seats"/>
-                <a class="nav-link" href="<c:out value='${seatsUrl}'/>">Seats</a>
+                <a class="nav-link" href="<c:out value='${seatsUrl}'/>" aria-current="${navigationPath == '/admin/seats' ? 'page' : 'false'}">Seats</a>
                 <c:url var="usersUrl" value="/admin/users"/>
-                <a class="nav-link" href="<c:out value='${usersUrl}'/>">Accounts</a>
+                <a class="nav-link" href="<c:out value='${usersUrl}'/>" aria-current="${navigationPath == '/admin/users' ? 'page' : 'false'}">Accounts</a>
             </c:if>
             <c:if test="${currentUser.role == 'ORGANIZER'}">
                 <c:url var="manageEventsUrl" value="/organizer/events"/>
-                <a class="nav-link" href="<c:out value='${manageEventsUrl}'/>">Manage events</a>
+                <a class="nav-link" href="<c:out value='${manageEventsUrl}'/>" aria-current="${navigationPath == '/organizer/events' ? 'page' : (navigationPath.startsWith('/organizer/events/') ? 'location' : 'false')}">Manage events</a>
             </c:if>
             <c:if test="${currentUser.role == 'CUSTOMER'}">
                 <c:url var="bookingsUrl" value="/customer/bookings"/>
-                <a class="nav-link" href="<c:out value='${bookingsUrl}'/>">My bookings</a>
+                <a class="nav-link" href="<c:out value='${bookingsUrl}'/>" aria-current="${navigationPath == '/customer/bookings' ? 'page' : (navigationPath.startsWith('/customer/bookings/') ? 'location' : 'false')}">My bookings</a>
             </c:if>
             <c:choose>
                 <c:when test="${not empty currentUser}">
                     <c:url var="accountHomeUrl" value="${currentUser.role.homePath}"/>
-                    <a class="nav-link" href="<c:out value='${accountHomeUrl}'/>">Your account</a>
+                    <a class="nav-link" href="<c:out value='${accountHomeUrl}'/>" aria-current="${navigationPath == currentUser.role.homePath ? 'page' : 'false'}">Your account</a>
                     <form method="post" action="<c:out value='${logoutUrl}'/>" class="m-0">
                         <input type="hidden" name="_csrf" value="<c:out value='${csrfToken}'/>">
                         <button class="btn btn-outline-dark btn-sm" type="submit">Sign out</button>
                     </form>
                 </c:when>
                 <c:otherwise>
-                    <a class="nav-link" href="<c:out value='${loginUrl}'/>">Sign in</a>
-                    <a class="btn btn-primary btn-sm" href="<c:out value='${registerUrl}'/>">Create account</a>
+                    <a class="nav-link" href="<c:out value='${loginUrl}'/>" aria-current="${navigationPath == '/login' ? 'page' : 'false'}">Sign in</a>
+                    <a class="btn btn-primary btn-sm" href="<c:out value='${registerUrl}'/>" aria-current="${navigationPath == '/register' ? 'page' : 'false'}">Create account</a>
                 </c:otherwise>
             </c:choose>
         </div>

@@ -21,7 +21,7 @@
                         <label class="form-label" for="category">Category ID</label>
                         <input
                             class="form-control"
-                            id="category"
+                            id="category" aria-describedby="event-filter-help"
                             name="category"
                             list="category-options"
                             inputmode="numeric"
@@ -31,7 +31,7 @@
                         <label class="form-label" for="venue">Venue ID</label>
                         <input
                             class="form-control"
-                            id="venue"
+                            id="venue" aria-describedby="event-filter-help"
                             name="venue"
                             list="venue-options"
                             inputmode="numeric"
@@ -72,7 +72,7 @@
                         <option value="${venue.id}"><c:out value="${venue.name}"/></option>
                     </c:forEach>
                 </datalist>
-                <p class="form-text mt-3">Use the name suggestions to choose an ID. Suggestions show up to 50 active categories and venues. Search treats punctuation literally.</p>
+                <p class="form-text mt-3" id="event-filter-help">Choose an ID from the name suggestions or enter another valid ID. Suggestions show up to 50 active categories and venues. Search treats punctuation literally.</p>
                 <button class="btn btn-primary" type="submit">Find events</button>
                 <a class="btn btn-outline-dark" href="<c:out value='${eventsUrl}'/>">Clear filters</a>
             </form>
@@ -95,7 +95,7 @@
                 </c:forEach>
             </div>
             <c:if test="${empty result.items}">
-                <div class="alert alert-info">No matching events on this page. Adjust your filters or return to an earlier page.</div>
+                <div class="alert alert-info"><c:out value="${result.total == 0 ? 'No upcoming events match these filters. Adjust or clear the filters to browse again.' : 'No events on this page. Use Previous or adjust the filters.'}"/></div>
             </c:if>
             <%@ include file="../common/paging.jspf" %>
         </main>

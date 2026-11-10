@@ -86,6 +86,9 @@ class AuthenticationHttpCheck {
             redirect(first.get(relative(role.getHomePath())), "/login");
         }
         status(200, first.get("assets/css/app.css"));
+        HttpResponse<String> feedbackScript = first.get("assets/js/form-feedback.js");
+        assertEquals(200, feedbackScript.statusCode());
+        assertTrue(feedbackScript.headers().firstValue("Content-Type").orElseThrow().contains("javascript"));
         status(200, first.get("assets/vendor/bootstrap-5.3.8.min.css"));
         for (String view : new String[]{"home.jsp", "auth/login.jsp", "auth/register.jsp", "account/home.jsp", "error.jsp"}) {
             status(404, first.get("WEB-INF/views/" + view));
@@ -110,6 +113,8 @@ class AuthenticationHttpCheck {
         HttpResponse<String> invalid = browser.post("register", form(token, "fullName", name, "email", "bad-email",
                 "password", PASSWORD, "confirmation", "different"));
         status(400, invalid);
+        HttpBrowser.invalidField(invalid, "email", "email-error");
+        HttpBrowser.invalidField(invalid, "confirmation", "confirmation-error");
         assertTrue(invalid.body().contains("The password confirmation does not match."));
         assertTrue(invalid.body().contains("Nguyễn Minh Anh 🎟 &lt;b&gt;Member&lt;/b&gt;"));
         assertFalse(invalid.body().contains(PASSWORD));

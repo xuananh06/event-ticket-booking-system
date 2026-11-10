@@ -67,6 +67,7 @@ class BookingHttpCheck {
         assertTrue(invalid.body().contains("Page 2 &middot;"));
         assertFalse(invalid.body().contains("id=\"select-" + x.ids.get(0) + "\""));
         assertChecked(invalid.body(), target);
+        invalidField(invalid, "select-" + target, "selection-error");
         RenderedForm corrected = rendered(invalid, "hold");
         assertEquals("2", corrected.fields().get("page")); assertEquals("10", corrected.fields().get("size"));
         assertEquals(unchanged, digest(x)); assertEquals(0, x.count("bookings")); assertEquals(0, x.count("booking_items"));

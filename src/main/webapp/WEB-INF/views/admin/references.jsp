@@ -25,12 +25,14 @@
                             <label class="form-label" for="venueId">Venue ID</label>
                             <input
                                 class="form-control mb-2"
-                                id="venueId"
+                                id="venueId" aria-describedby="venue-help venueId-error" aria-invalid="${not empty errors.venueId}"
                                 name="venueId"
                                 inputmode="numeric"
                                 list="venue-options"
                                 required
                                 value="<c:out value='${form.venueId}'/>">
+                            <div id="venueId-error" class="field-error"><c:out value="${errors.venueId}"/></div>
+                            <p id="venue-help" class="form-text">Choose a venue ID from the name suggestions or enter another valid ID. Suggestions show up to 50 records.</p>
                             <datalist id="venue-options">
                                 <c:forEach var="venue" items="${venues}">
                                     <option value="<c:out value='${venue.id}'/>"><c:out value="${venue.name}"/> (<c:out value="${venue.active ? 'active' : 'inactive'}"/>)</option>
@@ -40,48 +42,53 @@
                             <label class="form-label" for="rowLabel">Row label</label>
                             <input
                                 class="form-control mb-3"
-                                id="rowLabel"
+                                id="rowLabel" aria-describedby="rowLabel-error" aria-invalid="${not empty errors.rowLabel}"
                                 name="rowLabel"
                                 required
                                 maxlength="10"
                                 value="<c:out value='${form.rowLabel}'/>">
+                            <div id="rowLabel-error" class="field-error"><c:out value="${errors.rowLabel}"/></div>
                             <label class="form-label" for="seatNumber">Seat number</label>
                             <input
                                 class="form-control mb-3"
-                                id="seatNumber"
+                                id="seatNumber" aria-describedby="seatNumber-error" aria-invalid="${not empty errors.seatNumber}"
                                 name="seatNumber"
                                 type="number"
                                 min="1"
                                 max="2147483647"
                                 required
                                 value="<c:out value='${form.seatNumber}'/>">
+                            <div id="seatNumber-error" class="field-error"><c:out value="${errors.seatNumber}"/></div>
                         </c:when>
                         <c:otherwise>
                             <label class="form-label" for="name">Name</label>
                             <input
                                 class="form-control mb-3"
-                                id="name"
+                                id="name" aria-describedby="name-error" aria-invalid="${not empty errors.name}"
                                 name="name"
                                 required
                                 maxlength="${kind == 'categories' ? 100 : 150}"
                                 value="<c:out value='${form.name}'/>">
+                            <div id="name-error" class="field-error"><c:out value="${errors.name}"/></div>
                             <c:if test="${kind == 'venues'}">
                                 <label class="form-label" for="address">Address</label>
                                 <input
                                     class="form-control mb-3"
-                                    id="address"
+                                    id="address" aria-describedby="address-error" aria-invalid="${not empty errors.address}"
                                     name="address"
                                     required
                                     maxlength="300"
                                     value="<c:out value='${form.address}'/>">
+                                <div id="address-error" class="field-error"><c:out value="${errors.address}"/></div>
                             </c:if>
                         </c:otherwise>
                     </c:choose>
                     <label class="form-label" for="active">State</label>
-                    <select class="form-select mb-3" id="active" name="active">
+                    <select class="form-select mb-3" id="active" aria-describedby="active-error" aria-invalid="${not empty errors.active}" name="active">
                         <option value="true" ${form.active != 'false' ? 'selected' : ''}>Active</option>
                         <option value="false" ${form.active == 'false' ? 'selected' : ''}>Inactive</option>
                     </select>
+                    <div id="active-error" class="field-error"><c:out value="${errors.active}"/></div>
                     <button class="btn btn-primary" type="submit">Save record</button>
                 </form>
             </section>
@@ -108,20 +115,22 @@
                 <button class="btn btn-outline-dark align-self-end" type="submit">Filter</button>
             </form>
             <p><c:out value="${result.total}"/> records</p>
-            <div class="table-responsive">
-                <table class="table align-middle">
+            <p id="references-scroll-help" class="table-scroll-hint">Scroll the table horizontally when columns do not fit.</p>
+            <div class="table-responsive table-scroll" role="region" tabindex="0" aria-labelledby="references-caption" aria-describedby="references-scroll-help">
+                <table class="table align-middle table-wide">
+                    <caption id="references-caption" class="caption-top">Reference records matching the current filters</caption>
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Record</th>
-                            <th>State</th>
-                            <th>Actions</th>
+                            <th scope="col">ID</th>
+                            <th scope="col">Record</th>
+                            <th scope="col">State</th>
+                            <th scope="col">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <c:forEach var="item" items="${result.items}">
                             <tr>
-                                <td><c:out value="${item.id}"/></td>
+                                <td class="record-id"><c:out value="${item.id}"/></td>
                                 <td>
                                     <c:choose>
                                         <c:when test="${kind == 'seats'}"><c:out value="${item.venueName}"/> (ID <c:out value="${item.venueId}"/>) / <c:out value="${item.rowLabel}"/> <c:out value="${item.seatNumber}"/></c:when>

@@ -38,9 +38,10 @@
         <a class="btn btn-link px-0 mb-3" href="<c:out value='${detailUrl}'/>">Open a new simulation attempt</a>
     </c:if>
     <h3 class="h5">Payment history</h3>
-    <div class="table-responsive">
-        <table class="table">
-            <caption>Recorded attempts; replay returns the original outcome alongside the current state.</caption>
+    <p id="payments-scroll-help" class="table-scroll-hint">Scroll the table horizontally when columns do not fit.</p>
+    <div class="table-responsive table-scroll" role="region" tabindex="0" aria-labelledby="payments-caption" aria-describedby="payments-scroll-help">
+        <table class="table table-wide">
+            <caption id="payments-caption" class="caption-top">Recorded attempts; replay returns the original outcome alongside the current state.</caption>
             <thead>
                 <tr>
                     <th scope="col">Attempt</th>
@@ -54,10 +55,10 @@
             <tbody>
                 <c:forEach var="attempt" items="${attempts.items}">
                     <tr>
-                        <td><c:out value="${attempt.id}"/></td>
-                        <td><c:out value="${attempt.originalOutcome}"/></td>
-                        <td><c:out value="${attempt.status}"/></td>
-                        <td><c:out value="${attempt.amountLabel}"/></td>
+                        <td class="record-id"><c:out value="${attempt.id}"/></td>
+                        <td class="state-value"><c:out value="${attempt.originalOutcome}"/></td>
+                        <td class="state-value"><c:out value="${attempt.status}"/></td>
+                        <td class="money"><c:out value="${attempt.amountLabel}"/></td>
                         <td>
                             <div>Created: <c:out value="${attempt.createdLabel}"/></div>
                             <c:if test="${not empty attempt.succeededLabel}">

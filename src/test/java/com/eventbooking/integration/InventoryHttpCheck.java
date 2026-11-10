@@ -135,6 +135,7 @@ class InventoryHttpCheck {
             assertTrue(checkbox.find(), "The selected second-page seat must remain visible.");
             assertTrue(checkbox.group().contains(" checked"), "The visible seat selection must remain checked.");
             String priceId = individual ? "price-" + selected : "batch-price";
+            invalidField(invalid, priceId, individual ? "price-error-" + selected : "batch-price-error");
             var input = java.util.regex.Pattern.compile("<input\\b[^>]*id=\"" + priceId + "\"[^>]*>").matcher(invalid.body());
             assertTrue(input.find()); assertEquals("1.001", attribute(input.group(), "value"));
             var unsafeFields = new LinkedHashMap<>(fields); unsafeFields.put("price", "1.001<script>price</script>");
