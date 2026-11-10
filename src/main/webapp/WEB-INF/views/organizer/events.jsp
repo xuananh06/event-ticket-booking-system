@@ -40,68 +40,74 @@
                         <label class="form-label" for="title">Title</label>
                         <input
                             class="form-control mb-3"
-                            id="title"
+                            id="title" aria-describedby="title-error" aria-invalid="${not empty errors.title}"
                             name="title"
                             maxlength="200"
                             required
                             value="<c:out value='${form.title}'/>">
+                        <div id="title-error" class="field-error"><c:out value="${errors.title}"/></div>
                         <label class="form-label" for="description">Description (plain text)</label>
                         <textarea
                             class="form-control mb-3"
-                            id="description"
+                            id="description" aria-describedby="description-error" aria-invalid="${not empty errors.description}"
                             name="description"
                             rows="5"
                             maxlength="10000"
                             required><c:out value="${form.description}"/></textarea>
+                        <div id="description-error" class="field-error"><c:out value="${errors.description}"/></div>
                         <label class="form-label" for="category">Category ID</label>
                         <input
                             class="form-control mb-2"
-                            id="category"
+                            id="category" aria-describedby="category-help category-error" aria-invalid="${not empty errors.category}"
                             name="category"
                             list="category-options"
                             inputmode="numeric"
                             required
                             value="<c:out value='${form.category}'/>">
+                        <div id="category-error" class="field-error"><c:out value="${errors.category}"/></div>
                         <datalist id="category-options">
                             <c:forEach var="category" items="${categories}">
                                 <option value="${category.id}"><c:out value="${category.name}"/> (<c:out value="${category.active ? 'active' : 'inactive'}"/>)</option>
                             </c:forEach>
                         </datalist>
-                        <p class="form-text">Current category: <c:out value="${event.categoryName}"/>. Suggestions include inactive records; new assignments require active records.</p>
+                        <p class="form-text" id="category-help">Current category: <c:out value="${event.categoryName}"/>. Suggestions include up to 50 records. You can enter another valid ID; new assignments require active records.</p>
                         <label class="form-label" for="venue">Venue ID</label>
                         <input
                             class="form-control mb-2"
-                            id="venue"
+                            id="venue" aria-describedby="venue-help venue-error" aria-invalid="${not empty errors.venue}"
                             name="venue"
                             list="venue-options"
                             inputmode="numeric"
                             required
                             value="<c:out value='${form.venue}'/>">
+                        <div id="venue-error" class="field-error"><c:out value="${errors.venue}"/></div>
                         <datalist id="venue-options">
                             <c:forEach var="venue" items="${venues}">
                                 <option value="${venue.id}"><c:out value="${venue.name}"/> (<c:out value="${venue.active ? 'active' : 'inactive'}"/>)</option>
                             </c:forEach>
                         </datalist>
-                        <p class="form-text">Current venue: <c:out value="${event.venueName}"/>. Suggestions show up to 50 records. Existing unchanged inactive references can be retained.</p>
-                        <p>Enter local times in Asia/Bangkok (UTC+07:00).</p>
+                        <p class="form-text" id="venue-help">Current venue: <c:out value="${event.venueName}"/>. Suggestions show up to 50 records; you can enter another valid ID. Existing unchanged inactive references can be retained.</p>
+                        <p id="event-time-help">Enter local times in Asia/Bangkok (UTC+07:00).</p>
                         <label class="form-label" for="startsAt">Starts at</label>
                         <input
                             class="form-control mb-3"
                             type="datetime-local"
                             step="0.001"
-                            id="startsAt"
+                            id="startsAt" aria-describedby="event-time-help startsAt-error" aria-invalid="${not empty errors.startsAt}"
                             name="startsAt"
                             required
                             value="<c:out value='${form.startsAt}'/>">
+                        <div id="startsAt-error" class="field-error"><c:out value="${errors.startsAt}"/></div>
                         <label class="form-label" for="endsAt">Ends at</label>
                         <input
                             class="form-control mb-3"
                             type="datetime-local"
                             step="0.001"
-                            id="endsAt"
+                            id="endsAt" aria-describedby="event-time-help endsAt-error" aria-invalid="${not empty errors.endsAt}"
                             name="endsAt"
                             required
                             value="<c:out value='${form.endsAt}'/>">
+                        <div id="endsAt-error" class="field-error"><c:out value="${errors.endsAt}"/></div>
                         <button class="btn btn-primary" type="submit">Save draft</button>
                     </form>
                 </section>
@@ -131,15 +137,17 @@
                 <button class="btn btn-outline-dark align-self-end" type="submit">Filter</button>
             </form>
             <p><c:out value="${result.total}"/> events</p>
-            <div class="table-responsive">
-                <table class="table align-middle">
+            <p id="managed-events-scroll-help" class="table-scroll-hint">Scroll the table horizontally when columns do not fit.</p>
+            <div class="table-responsive table-scroll" role="region" tabindex="0" aria-labelledby="managed-events-caption" aria-describedby="managed-events-scroll-help">
+                <table class="table align-middle table-wide">
+                    <caption id="managed-events-caption" class="caption-top">Your events matching the current filters</caption>
                     <thead>
                         <tr>
-                            <th>Event</th>
-                            <th>References</th>
-                            <th>Starts (Asia/Bangkok)</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th scope="col">Event</th>
+                            <th scope="col">References</th>
+                            <th scope="col">Starts (Asia/Bangkok)</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -148,7 +156,7 @@
                                 <td><c:out value="${item.title}"/></td>
                                 <td><c:out value="${item.categoryName}"/><br><c:out value="${item.venueName}"/></td>
                                 <td><c:out value="${item.startsLabel}"/></td>
-                                <td><c:out value="${item.status}"/></td>
+                                <td class="state-value"><c:out value="${item.status}"/></td>
                                 <td>
                                     <c:url var="detailUrl" value="/organizer/events">
                                         <c:param name="id" value="${item.id}"/>
