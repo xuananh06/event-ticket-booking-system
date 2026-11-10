@@ -17,9 +17,10 @@
     </dd>
 </dl>
 <p><strong>Legend:</strong> AVAILABLE: available now; HELD: temporarily held; UNAVAILABLE: sold or inactive. Expired holds count as available. Displayed availability is informational and does not reserve a seat.</p>
-<div class="table-responsive">
-    <table class="table align-middle inventory-table">
-        <caption>Seat layout and VND prices</caption>
+<p id="inventory-scroll-help" class="table-scroll-hint">Scroll the table horizontally when columns do not fit.</p>
+<div class="table-responsive table-scroll" role="region" tabindex="0" aria-labelledby="inventory-caption" aria-describedby="inventory-scroll-help">
+    <table class="table align-middle inventory-table ${editable ? 'table-wide' : 'selection-table'}">
+        <caption id="inventory-caption" class="caption-top">Seat layout and VND prices</caption>
         <thead>
             <tr>
                 <c:if test="${editable}">
@@ -44,19 +45,21 @@
                         <c:if test="${editable}">
                             <td>
                                 <input
-                                    class="form-check-input"
+                                    class="form-check-input seat-choice-input"
                                     type="checkbox"
                                     form="batch-pricing"
                                     name="eventSeatId"
                                     value="${seat.id}"
                                     id="select-${seat.id}"
+                                    aria-describedby="inventory-selection-error"
+                                    aria-invalid="${not empty errors.eventSeatId}"
                                     ${selected.contains(seat.id.toString()) ? 'checked' : ''}>
-                                <label class="visually-hidden" for="select-${seat.id}">Select row <c:out value="${seat.rowLabel}"/> seat <c:out value="${seat.seatNumber}"/></label>
+                                <label class="seat-choice" for="select-${seat.id}"><span aria-hidden="true">Choose</span><span class="visually-hidden">Select row <c:out value="${seat.rowLabel}"/> seat <c:out value="${seat.seatNumber}"/></span></label>
                             </td>
                         </c:if>
                         <td><c:out value="${seat.rowLabel}"/> / <c:out value="${seat.seatNumber}"/></td>
-                        <td><c:out value="${seat.id}"/> / <c:out value="${seat.seatId}"/></td>
-                        <td><c:out value="${seat.priceLabel}"/></td>
+                        <td class="record-id"><c:out value="${seat.id}"/> / <c:out value="${seat.seatId}"/></td>
+                        <td class="money"><c:out value="${seat.priceLabel}"/></td>
                         <td><span class="badge text-bg-secondary"><c:out value="${seat.state}"/></span></td>
                         <c:if test="${editable}">
                             <td>
@@ -74,11 +77,14 @@
                                     <input
                                         class="form-control inventory-price"
                                         id="price-${seat.id}"
+                                        aria-describedby="price-format-help price-error-${seat.id}"
+                                        aria-invalid="${param.action == 'price' and selected.contains(seat.id.toString()) and not empty errors.price}"
                                         name="price"
                                         inputmode="decimal"
                                         maxlength="64"
                                         required
                                         value="<c:out value='${selected.contains(seat.id.toString()) ? priceValue : seat.priceLabel}'/>">
+                                    <div id="price-error-${seat.id}" class="field-error"><c:if test="${param.action == 'price' and selected.contains(seat.id.toString())}"><c:out value="${errors.price}"/></c:if></div>
                                     <button class="btn btn-sm btn-outline-dark" type="submit">Update one seat</button>
                                 </form>
                             </td>
