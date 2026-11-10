@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" pageEncoding="UTF-8" isELIgnored="false" session="false" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!doctype html>
+
 <html lang="en">
     <head>
         <%@ include file="common/head.jspf" %>
