@@ -19,7 +19,7 @@
                         <label class="form-label" for="fullName">Full name</label>
                         <input
                             class="form-control"
-                            id="fullName"
+                            id="fullName" aria-invalid="${not empty errors.fullName}"
                             name="fullName"
                             autocomplete="name"
                             maxlength="150"
@@ -32,7 +32,7 @@
                         <label class="form-label" for="email">Email address</label>
                         <input
                             class="form-control"
-                            id="email"
+                            id="email" aria-invalid="${not empty errors.email}"
                             name="email"
                             type="email"
                             autocomplete="email"
@@ -46,7 +46,7 @@
                         <label class="form-label" for="password">Password</label>
                         <input
                             class="form-control"
-                            id="password"
+                            id="password" aria-invalid="${not empty errors.password}"
                             name="password"
                             type="password"
                             autocomplete="new-password"
@@ -60,7 +60,7 @@
                         <label class="form-label" for="confirmation">Confirm password</label>
                         <input
                             class="form-control"
-                            id="confirmation"
+                            id="confirmation" aria-invalid="${not empty errors.confirmation}"
                             name="confirmation"
                             type="password"
                             autocomplete="new-password"

@@ -25,6 +25,24 @@ a { color: var(--campus-blue); text-underline-offset: .2em; }
 .form-control:focus { border-color: #7b9aee; box-shadow: 0 0 0 .2rem #234dc422; }
 .field-error { color: #ad2030; font-size: .85rem; margin-top: .35rem; }
 .field-error:empty { display: none; }
+.field-error:not(:empty) { margin-bottom: 1rem; }
+.form-control[aria-invalid="true"], .form-select[aria-invalid="true"] { border-color: #ad2030; margin-bottom: 0; }
+.form-check-input[aria-invalid="true"] { border-color: #ad2030; }
+.table-scroll { position: relative; border: 1px solid #dce5ee; border-radius: .65rem; padding: .25rem; }
+.table-wide { min-width: 48rem; }
+.table-scroll-hint { color: var(--campus-muted); font-size: .85rem; margin-bottom: .5rem; }
+.table .record-id { white-space: nowrap; }
+.table .money { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.table .state-value { white-space: nowrap; }
+.selection-table { min-width: 34rem; }
+.reserved-table { min-width: 26rem; }
+.seat-choice-input { width: 1.5rem; height: 1.5rem; margin-right: .5rem; vertical-align: middle; }
+.seat-choice { display: inline-block; padding: .5rem .15rem; cursor: pointer; }
+.seat-choice-input:disabled + .seat-choice { cursor: default; color: var(--campus-muted); }
+.selection-summary { padding: 1rem; border: 1px solid #dce5ff; border-radius: .75rem; background: #eaf0ff; }
+.selection-summary output { font-weight: 750; font-variant-numeric: tabular-nums; }
+.booking-total { padding: 1rem; border-radius: .75rem; background: #eaf0ff; }
+.booking-total strong { display: block; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
 .btn { border-radius: .65rem; padding: .65rem 1.2rem; font-weight: 600; }
 .btn-sm { padding: .45rem .9rem; }
 .btn-primary { --bs-btn-bg: var(--campus-blue); --bs-btn-border-color: var(--campus-blue); --bs-btn-hover-bg: #193b9b; --bs-btn-hover-border-color: #193b9b; }
@@ -33,4 +51,8 @@ a { color: var(--campus-blue); text-underline-offset: .2em; }
 .site-footer { border-top: 1px solid #e8edf6; color: var(--campus-muted); font-size: .85rem; }
 .skip-link { position: absolute; left: -10000px; background: #fff; padding: .7rem; z-index: 10; }
 .skip-link:focus { left: 1rem; top: .5rem; }
+.page-content :is(h1, h2, h3, p, dd, li) { overflow-wrap: anywhere; }
+.site-header [aria-current]:not([aria-current="false"]) { font-weight: 750; text-decoration: underline; text-decoration-thickness: .12em; }
+:is(a, button, input, select, textarea, [tabindex]):focus-visible { outline: 3px solid var(--campus-blue); outline-offset: 3px; }
+@media (max-width: 575px) { .hero { --bs-gutter-x: 1.5rem; } }
 @media (max-width: 575px) { .page-content { padding-top: 2rem; } .auth-card, .account-card { padding: 1.5rem; } .hero { min-height: auto; } }

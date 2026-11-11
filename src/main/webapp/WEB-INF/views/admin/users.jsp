@@ -23,50 +23,56 @@
                     <label class="form-label" for="fullName">Full name</label>
                     <input
                         class="form-control mb-3"
-                        id="fullName"
+                        id="fullName" aria-describedby="fullName-error" aria-invalid="${not empty errors.fullName}"
                         name="fullName"
                         maxlength="150"
                         required
                         value="<c:out value='${form.fullName}'/>">
+                    <div id="fullName-error" class="field-error"><c:out value="${errors.fullName}"/></div>
                     <label class="form-label" for="email">Email address</label>
                     <input
                         class="form-control mb-3"
-                        id="email"
+                        id="email" aria-describedby="email-error" aria-invalid="${not empty errors.email}"
                         name="email"
                         type="email"
                         maxlength="254"
                         required
                         value="<c:out value='${form.email}'/>">
+                    <div id="email-error" class="field-error"><c:out value="${errors.email}"/></div>
                     <label class="form-label" for="role">Role</label>
-                    <select class="form-select mb-3" id="role" name="role">
+                    <select class="form-select mb-3" id="role" aria-describedby="role-error" aria-invalid="${not empty errors.role}" name="role">
                         <c:forEach var="role" items="${roles}">
                             <option value="${role}" ${form.role == role.toString() ? 'selected' : ''}><c:out value="${role.displayName}"/></option>
                         </c:forEach>
                     </select>
+                    <div id="role-error" class="field-error"><c:out value="${errors.role}"/></div>
                     <label class="form-label" for="active">State</label>
-                    <select class="form-select mb-3" id="active" name="active">
+                    <select class="form-select mb-3" id="active" aria-describedby="active-error" aria-invalid="${not empty errors.active}" name="active">
                         <option value="true" ${form.active != 'false' ? 'selected' : ''}>Active</option>
                         <option value="false" ${form.active == 'false' ? 'selected' : ''}>Inactive</option>
                     </select>
+                    <div id="active-error" class="field-error"><c:out value="${errors.active}"/></div>
                     <c:if test="${empty form.id}">
                         <label class="form-label" for="password">Initial password</label>
                         <input
                             class="form-control mb-3"
-                            id="password"
+                            id="password" aria-describedby="password-error" aria-invalid="${not empty errors.password}"
                             name="password"
                             type="password"
                             autocomplete="new-password"
                             maxlength="72"
                             required>
+                        <div id="password-error" class="field-error"><c:out value="${errors.password}"/></div>
                         <label class="form-label" for="confirmation">Confirm password</label>
                         <input
                             class="form-control mb-3"
-                            id="confirmation"
+                            id="confirmation" aria-describedby="confirmation-error" aria-invalid="${not empty errors.confirmation}"
                             name="confirmation"
                             type="password"
                             autocomplete="new-password"
                             maxlength="72"
                             required>
+                        <div id="confirmation-error" class="field-error"><c:out value="${errors.confirmation}"/></div>
                         <p class="form-text">Use 8-72 UTF-8 bytes. Passwords are not trimmed.</p>
                     </c:if>
                     <button class="btn btn-primary" type="submit">Save account</button>
@@ -86,24 +92,26 @@
                 <button class="btn btn-outline-dark align-self-end" type="submit">Search</button>
             </form>
             <p><c:out value="${result.total}"/> accounts</p>
-            <div class="table-responsive">
-                <table class="table align-middle">
+            <p id="accounts-scroll-help" class="table-scroll-hint">Scroll the table horizontally when columns do not fit.</p>
+            <div class="table-responsive table-scroll" role="region" tabindex="0" aria-labelledby="accounts-caption" aria-describedby="accounts-scroll-help">
+                <table class="table align-middle table-wide">
+                    <caption id="accounts-caption" class="caption-top">Accounts matching the current filters</caption>
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Account</th>
-                            <th>Role</th>
-                            <th>State</th>
-                            <th>Actions</th>
+                            <th scope="col">ID</th>
+                            <th scope="col">Account</th>
+                            <th scope="col">Role</th>
+                            <th scope="col">State</th>
+                            <th scope="col">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <c:forEach var="user" items="${result.items}">
                             <tr>
-                                <td><c:out value="${user.id}"/></td>
+                                <td class="record-id"><c:out value="${user.id}"/></td>
                                 <td><c:out value="${user.fullName}"/><br><c:out value="${user.email}"/></td>
-                                <td><c:out value="${user.role.displayName}"/></td>
-                                <td><c:out value="${user.active ? 'Active' : 'Inactive'}"/></td>
+                                <td class="state-value"><c:out value="${user.role.displayName}"/></td>
+                                <td class="state-value"><c:out value="${user.active ? 'Active' : 'Inactive'}"/></td>
                                 <td>
                                     <div class="d-flex flex-wrap gap-2">
                                         <c:url var="editUrl" value="/admin/users">

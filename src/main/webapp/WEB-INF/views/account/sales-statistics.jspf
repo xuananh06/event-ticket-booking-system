@@ -1,0 +1,36 @@
+<article class="col-12 col-sm-6 col-xl-4">
+    <div class="card h-100">
+        <div class="card-body">
+            <h3 class="h6">Tickets sold</h3>
+            <p id="metric-tickets-sold" class="fs-2 fw-semibold text-break mb-0"><c:out value="${statistics.sales.ticketsSold}"/></p>
+            <p class="small text-secondary mb-0">Seats in currently confirmed bookings, including free tickets. Cancelled and refunded tickets are excluded.</p>
+        </div>
+    </div>
+</article>
+<article class="col-12 col-sm-6 col-xl-4">
+    <div class="card h-100">
+        <div class="card-body">
+            <h3 class="h6">Gross payments</h3>
+            <p id="metric-gross-payments" class="fs-4 fw-semibold text-break mb-0"><c:out value="${statistics.sales.grossPaymentsLabel}"/></p>
+            <p class="small text-secondary mb-0">Simulated payments in VND, including amounts later refunded.</p>
+        </div>
+    </div>
+</article>
+<article class="col-12 col-sm-6 col-xl-4">
+    <div class="card h-100">
+        <div class="card-body">
+            <h3 class="h6">Refunded payments</h3>
+            <p id="metric-refunded-payments" class="fs-4 fw-semibold text-break mb-0"><c:out value="${statistics.sales.refundedPaymentsLabel}"/></p>
+            <p class="small text-secondary mb-0">Full simulated refunds in VND.</p>
+        </div>
+    </div>
+</article>
+<article class="col-12 col-sm-6 col-xl-4">
+    <div class="card h-100">
+        <div class="card-body">
+            <h3 class="h6">Net revenue</h3>
+            <p id="metric-net-revenue" class="fs-4 fw-semibold text-break mb-0"><c:out value="${statistics.sales.netRevenueLabel}"/></p>
+            <p class="small text-secondary mb-0">Gross payments minus refunded payments, in VND. All payments are simulated.</p>
+        </div>
+    </div>
+</article>

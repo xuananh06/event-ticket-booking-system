@@ -19,15 +19,20 @@ Implemented:
 - Explicit successful/failed payment simulation, idempotent replay and atomic whole-booking confirmation.
 - Owner-only paged booking/payment history, effective status filters and booking details.
 - Whole-booking cancellation before event start and full simulated refunds, preserving transaction history and later seat owners.
+- All-time Customer booking counts, Organizer-owned event/sales statistics and Admin system-wide totals.
 - External database configuration and a bounded, read-only connectivity check at application startup.
 - A nine-table SQL Server schema with relational constraints, query indexes, demo accounts, events, and seat inventory.
 - Unit tests, real SQL Server schema/registration tests, and isolated Tomcat HTTP checks with independent cookie sessions.
 
 Planned capabilities, not yet available as application workflows:
 
-- Statistics and dashboards. Real payment providers, QR tickets/check-in and partial refunds are not implemented.
+- Real payment providers, QR tickets/check-in and partial refunds are not implemented.
 
-Role welcome pages retain account information and navigation to implemented screens. Customers enter reservation selection from an eligible event's public seat page. Statistics are not available.
+Role home pages retain account information and navigation alongside actual all-time statistics. Customers enter reservation selection from an eligible event's public seat page.
+
+Navigation marks the current page or section and supports keyboard focus and skipping to the main content. Validation errors appear beside their fields; when local JavaScript is available, the error summary receives focus and links to fields for correction. Passwords are never redisplayed after validation.
+
+Wide tables retain all columns and actions in a labelled horizontal scroll region. Focus the region and use the arrow keys when needed. Seat checkboxes have visible labels, and selection quantity and the exact provisional total appear above the seat table. The server remains authoritative for availability, prices and hold deadlines; ordinary reservation and payment forms also work without JavaScript.
 
 ## Requirements
 
@@ -122,9 +127,9 @@ Names support Unicode and allow 1-150 UTF-16 code units after stripping outer wh
 | `GET /register`, `POST /register` | Registration form and customer creation |
 | `GET /login`, `POST /login` | Sign-in form and authentication |
 | `POST /logout` | Invalidate the current session and return home; GET returns 405 |
-| `GET /customer/home` | CUSTOMER welcome page |
-| `GET /organizer/home` | ORGANIZER welcome page |
-| `GET /admin/home` | ADMIN welcome page |
+| `GET /customer/home` | CUSTOMER account and owned booking statistics |
+| `GET /organizer/home` | ORGANIZER account and owned event/sales statistics |
+| `GET /admin/home` | ADMIN account and system-wide statistics |
 | `GET /health` | Generic, cached database startup snapshot as JSON |
 | `GET /admin/categories`, `/admin/venues`, `/admin/seats` | Paged Admin reference lists and create/edit forms; optional edit `id` |
 | `POST /admin/categories`, `/admin/venues`, `/admin/seats` | Explicit `save`, `status` or `delete` actions |
@@ -147,6 +152,18 @@ Names support Unicode and allow 1-150 UTF-16 code units after stripping outer wh
 Guests requesting protected pages redirect to sign-in. A signed-in user requesting another role's page receives 403. The application rereads the current role and active status from the database rather than trusting a cached role. Disabled/deleted identities are invalidated. Unknown accounts, wrong passwords, and inactive accounts receive the same credential error. Database failures produce a generic 503 for database-dependent actions.
 
 Forms submit session-bound `_csrf` values in the request body, including registration, login, and logout. Keep cookies enabled. Missing, invalid, cross-session, or stale tokens return 403; reopen the form after expiry. Authentication changes the session ID and CSRF token. Successful actions use HTTP 303 redirects to fixed application destinations; credentials and tokens are never added to redirect URLs.
+
+## Role statistics
+
+Open **Your account** after signing in. Summary cards cover all time and use the current server-authenticated account; query parameters cannot select another Customer, Organizer or role.
+
+- Customers see Total, Pending, Confirmed, Expired and Cancelled bookings, with links to the corresponding history filters. Pending means an unexpired PENDING hold; Expired includes stored EXPIRED and PENDING whose deadline has been reached. Confirmed bookings remain confirmed after the original deadline. The four status counts sum to Total bookings.
+- Organizers see all owned events, upcoming published events, tickets sold and simulated gross/refunded/net payments. Upcoming published is a state/time count, not a guarantee of purchase eligibility. Historical sales remain included after event start or related-record deactivation.
+- Administrators see all accounts, events and bookings, confirmed tickets and the same financial totals across the system. Account counts include inactive accounts and the current Admin.
+
+Tickets sold counts seats in currently CONFIRMED bookings, including free tickets. Pending holds and cancelled/refunded tickets are excluded. Gross payments sums every payment with a recorded success, including amounts now REFUNDED; Refunded payments sums current REFUNDED rows. Net revenue is Gross payments minus Refunded payments. Failed attempts, replay and repeated cancellation add no money. Separate equal-value payments each count, independently of seat quantity and failed-attempt count. All monetary values are exact two-decimal VND amounts from simulations.
+
+Each summary revalidates the current active role and reads through one bounded SERIALIZABLE transaction with one captured database UTC time. It does not modify bookings, normalize expiry or take the management write lock. A genuinely empty authorized scope shows zeros; database/read failures return a controlled error page. Read locks can briefly delay concurrent financial changes; this is not a high-throughput performance guarantee.
 
 ## Management and event browsing
 
@@ -386,13 +403,13 @@ Reservation SQL checks cover exact booking/items/deadlines, ownership, aggregate
 
 Payment/history/cancellation SQL checks cover exact success/failure/free amounts, immutable snapshots, replay across state/time changes, scoped keys and one lifetime success, effective filtered history and bounded attempts. Distinct real SERIALIZABLE connections exercise the production transaction work with and without shared application-lock coordination. Boundary and injected-failure checks prove complete rollback after financial inserts/refunds and partial seat updates. Payment/cancel, repeated cancel, expiry/takeover and rebooking races assert consistent financial/booking/inventory state and preservation of newer owners.
 
-The script's `-AuthenticationTests` switch runs six JUnit HTTP scenarios with independent cookie sessions. Authentication checks registration, validation/escaping, three seeded role logins, all nine role-route pairs, negative/stale CSRF, session rotation/replay/logout, inactive/changed accounts, expiry and logout from authenticated POST error pages. Management/catalog checks real rendered forms, reference/account/event CRUD, role/ownership and credential-field tampering, CSRF rejection, public visibility, encoded paging and invalid inputs. Inventory checks rendered generation/pricing/publication forms, immutable setup, ownership/CSRF/tampering, effective public availability and validation/conflict logout. Reservations exercise actual non-first-page forms, corrected resubmission, server-derived fields, owned checkout, negative CSRF, mixed-seat atomicity, real session expiry without renewal, expired takeover and safe normalization/logout. Payment and cancellation use actual rendered forms to verify outcomes, retries/replays, history, full refunds, rebooking, critical duplicate-field rejection and error-page logout. Without an available database they check guest boundaries, foundation availability and generic auth/catalog/inventory 503 responses. Seeded accounts are used for login only. Fixture users have `auth-<UUID>-...@example.test` emails; reference data uses a `Fixture <UUID>` label. An abruptly terminated test may leave owned fixtures or an isolated `p3_admin_<UUID>` schema; inspect exact ownership before manual cleanup.
+The script's `-AuthenticationTests` switch runs eight JUnit HTTP scenarios with independent cookie sessions. Authentication checks registration, validation/escaping, three seeded role logins, all nine role-route pairs, negative/stale CSRF, session rotation/replay/logout, inactive/changed accounts, expiry and logout from authenticated POST error pages. Management/catalog checks real rendered forms, reference/account/event CRUD, role/ownership and credential-field tampering, CSRF rejection, public visibility, encoded paging and invalid inputs. Inventory checks rendered generation/pricing/publication forms, immutable setup, ownership/CSRF/tampering, effective public availability and validation/conflict logout. Reservations exercise actual non-first-page forms, corrected resubmission, server-derived fields, owned checkout, negative CSRF, mixed-seat atomicity, real session expiry without renewal, expired takeover and safe normalization/logout. Payment and cancellation use actual rendered forms to verify outcomes, retries/replays, history, full refunds, rebooking, critical duplicate-field rejection and error-page logout. Statistics checks rendered role summaries, scoped zeros, financial reconciliation, query-scope tampering, read-only behavior, safe failures, links and logout. The integrated journey creates accounts and reference data through Admin forms, publishes Organizer inventory, purchases multiple seats from page two, fails/retries/replays payment, refunds once and rebooks for another Customer while comparing rendered statistics with independent SQL aggregates. Only its bootstrap Admin uses a fixture helper. Without an available database they check guest boundaries, foundation availability and generic auth/catalog/inventory 503 responses. Seeded accounts are used for login only. Fixture users have `auth-<UUID>-...@example.test` emails; reference data uses a `Fixture <UUID>` label. An abruptly terminated test may leave owned fixtures or an isolated `p3_admin_<UUID>` schema; inspect exact ownership before manual cleanup.
 
 Surefire reports are in `target/surefire-reports`; Failsafe reports are in `target/failsafe-reports`. Each HTTP invocation replaces its scenario report. Tomcat smoke logs and the captured anonymous response are under `target/tomcat-smoke-*/logs`; auth form bodies, passwords, cookies, and tokens are not written as evidence. `mvn clean` removes `target`, including those artifacts. Stop any manually launched JVM using that directory before cleaning on Windows. A successful build alone does not establish deployment or database correctness.
 
 ## Technical limitations
 
-Payments/refunds are simulations only. Real payment integration, QR generation/check-in, partial cancellation/refund, Admin/Organizer booking overrides and dashboards are unavailable. Authentication has no email verification, password recovery/change, MFA or rate limiting. Bootstrap CSS is local; core forms and checkout require no JavaScript. Reference suggestions and inventory pages are capped at 50; explicit reference IDs and paging support larger data sets. Reservation, payment and management writes share deliberately conservative database serialization, so high-throughput booking performance is not established. Availability/history use captured database time and matching predicates across separate read statements, rather than promising a snapshot-isolated view during external writes. Expiry has no background worker; effective expiration/reuse and owner-triggered normalization work independently of one. HTTPS/proxy setup, production permission provisioning, pooling, load testing and a broader browser/accessibility matrix require deployment-specific work.
+Payments/refunds are simulations only. Real payment integration, QR generation/check-in, partial cancellation/refund, Admin/Organizer booking overrides are unavailable. Authentication has no email verification, password recovery/change, MFA or rate limiting. Bootstrap CSS is local; core forms and checkout require no JavaScript. Reference suggestions and inventory pages are capped at 50; explicit reference IDs and paging support larger data sets. Reservation, payment and management writes share deliberately conservative database serialization, so high-throughput booking performance is not established. Availability/history use captured database time and matching predicates across separate read statements, rather than promising a snapshot-isolated view during external writes. Expiry has no background worker; effective expiration/reuse and owner-triggered normalization work independently of one. HTTPS/proxy setup, production permission provisioning, pooling, load testing and a broader browser/accessibility matrix require deployment-specific work.
 
 ## Troubleshooting
 

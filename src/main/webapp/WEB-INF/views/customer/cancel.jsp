@@ -17,11 +17,11 @@
                     <dt class="col-sm-4">Booking code</dt>
                     <dd class="col-sm-8"><c:out value="${booking.code}"/></dd>
                     <dt class="col-sm-4">Current state</dt>
-                    <dd class="col-sm-8" id="booking-state"><c:out value="${summary.state}"/></dd>
+                    <dd class="col-sm-8 fw-bold" id="booking-state"><c:out value="${summary.state}"/></dd>
                     <dt class="col-sm-4">Seats</dt>
                     <dd class="col-sm-8"><c:out value="${summary.items.size()}"/></dd>
                     <dt class="col-sm-4">Stored total (VND)</dt>
-                    <dd class="col-sm-8"><c:out value="${booking.totalLabel}"/></dd>
+                    <dd class="col-sm-8 fw-bold"><c:out value="${booking.totalLabel}"/></dd>
                 </dl>
                 <c:choose>
                     <c:when test="${canCancel}">
@@ -46,9 +46,10 @@
                             <input type="hidden" name="bookingId" value="${booking.id}">
                             <%@ include file="booking-context.jspf" %>
                             <div class="form-check my-3">
-                                <input class="form-check-input" id="confirm-cancellation" type="checkbox" name="confirm" value="yes" required>
+                                <input class="form-check-input seat-choice-input" id="confirm-cancellation" aria-describedby="cancellation-error" aria-invalid="${not empty errors.confirm}" type="checkbox" name="confirm" value="yes" required>
                                 <label class="form-check-label" for="confirm-cancellation">I confirm cancellation of the entire booking.</label>
                             </div>
+                            <div id="cancellation-error" class="field-error"><c:out value="${errors.confirm}"/></div>
                             <button class="btn btn-danger" type="submit">Confirm whole-booking cancellation</button>
                         </form>
                     </c:when>

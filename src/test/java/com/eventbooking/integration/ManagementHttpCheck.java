@@ -84,6 +84,8 @@ class ManagementHttpCheck {
         rejectTokens(browser, create, create.fields("action", "save", "id", "", "fullName", "Blocked Member", "email", email, "role", "CUSTOMER", "active", "true", "password", P3Fixture.PASSWORD, "confirmation", P3Fixture.PASSWORD));
         var invalid = browser.post(create.action(), create.fields("action", "save", "id", "", "fullName", "Created Member", "email", email, "role", "CUSTOMER", "active", "true", "password", "short", "confirmation", "different"));
         status(400, invalid);
+        invalidField(invalid, "password", "password-error");
+        invalidField(invalid, "confirmation", "confirmation-error");
         assertFalse(invalid.body().contains("value=\"short\""));
         assertTrue(invalid.body().contains("The password confirmation does not match."));
         browser.redirect(browser.post(create.action(), create.fields("action", "save", "id", "", "fullName", "HTTP Account <b>Member</b>", "email", email, "role", "ORGANIZER", "active", "true", "password", P3Fixture.PASSWORD, "confirmation", P3Fixture.PASSWORD)), "admin/users");

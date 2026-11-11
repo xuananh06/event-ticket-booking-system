@@ -3,3 +3,5 @@
         <span>Campus Events</span><span>A place for your university community.</span>
     </div>
 </footer>
+<c:url var="formFeedbackUrl" value="/assets/js/form-feedback.js"/>
+<script src="<c:out value='${formFeedbackUrl}'/>" defer></script>

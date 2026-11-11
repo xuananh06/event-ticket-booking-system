@@ -161,6 +161,8 @@
                                 <include>**/BookingHttpCheck.java</include>
                                 <include>**/PaymentHttpCheck.java</include>
                                 <include>**/CancellationHttpCheck.java</include>
+                                <include>**/StatisticsHttpCheck.java</include>
+                                <include>**/JourneyHttpCheck.java</include>
                             </includes>
                         </configuration>
                         <executions>

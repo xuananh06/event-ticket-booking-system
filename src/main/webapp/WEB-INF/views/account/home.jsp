@@ -19,6 +19,7 @@
                     <dd class="col-sm-9"><span class="role-badge"><c:out value="${currentUser.role.displayName}"/></span></dd>
                 </dl>
             </section>
+            <%@ include file="statistics.jspf" %>
         </main>
         <%@ include file="../common/footer.jspf" %>
     </body>
