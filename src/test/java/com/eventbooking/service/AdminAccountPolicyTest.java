@@ -20,8 +20,8 @@ class AdminAccountPolicyTest {
     @Test
     void sharedValidationAndRoleAllowlists() {
         var hasher = new PasswordHasher();
-        assertEquals("member@example.test", AccountValidation.registration(" Member ", " MEMBER@EXAMPLE.TEST ", " Password! ", " Password! ", hasher).email());
-        assertThrows(ValidationException.class, () -> AccountValidation.registration("Member", "a@example.test", "short", "different", hasher));
+        assertEquals("member@example.test", AccountValidation.registration(" Member ", "member", " MEMBER@EXAMPLE.TEST ", " Password! ", " Password! ", hasher).email());
+        assertThrows(ValidationException.class, () -> AccountValidation.registration("Member", "member", "a@example.test", "short", "different", hasher));
         assertThrows(ValidationException.class, () -> AdminUserService.role("admin"));
         assertThrows(ValidationException.class, () -> AdminUserService.role(null));
         assertEquals(Role.ADMIN, AdminUserService.role("ADMIN"));

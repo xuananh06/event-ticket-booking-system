@@ -179,12 +179,13 @@ class JourneyHttpCheck {
 
         private long account(HttpBrowser admin, String email, String role) throws Exception {
             var create = form(admin.get("admin/users"), "save", null);
-            admin.redirect(admin.post(create.action(), create.fields("action", "save", "id", "", "fullName", "Journey " + role, "email", email, "role", role, "active", "true", "password", P3Fixture.PASSWORD, "confirmation", P3Fixture.PASSWORD)), "admin/users");
+            admin.redirect(admin.post(create.action(), create.fields("action", "save", "id", "", "fullName", "Journey " + role, "username", TestDatabase.usernameFor(email), "email", email, "role", role, "active", "true", "password", P3Fixture.PASSWORD, "confirmation", P3Fixture.PASSWORD)), "admin/users");
             return id("SELECT id FROM dbo.users WHERE email=? AND role=? AND is_active=1", email, role);
         }
 
         HttpBrowser login(String email, String role) throws Exception {
-            HttpBrowser browser = new HttpBrowser(); browser.login(email, P3Fixture.PASSWORD, role + "/home"); return browser;
+            String identifier = email.equals(firstEmail) ? TestDatabase.usernameFor(email) : email;
+            HttpBrowser browser = new HttpBrowser(); browser.login(identifier, P3Fixture.PASSWORD, role + "/home"); return browser;
         }
 
         String catalog() { return "events?q=" + URLEncoder.encode(f.prefix + "Journey", StandardCharsets.UTF_8) + "&category=" + category + "&venue=" + venue + "&size=1"; }

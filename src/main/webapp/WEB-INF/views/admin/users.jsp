@@ -29,6 +29,18 @@
                         required
                         value="<c:out value='${form.fullName}'/>">
                     <div id="fullName-error" class="field-error"><c:out value="${errors.fullName}"/></div>
+                    <label class="form-label" for="username">Username</label>
+                    <input
+                        class="form-control mb-3"
+                        id="username" aria-describedby="username-help username-error" aria-invalid="${not empty errors.username}"
+                        name="username"
+                        type="text"
+                        autocomplete="off"
+                        maxlength="64"
+                        ${empty form.id ? 'required' : ''}
+                        value="<c:out value='${form.username}'/>">
+                    <p id="username-help" class="form-text">Use 3-30 ASCII letters, digits, periods, underscores or hyphens. Outer whitespace is removed and uppercase becomes lowercase. Do not use @. A legacy account may remain unassigned; an assigned username cannot be cleared.</p>
+                    <div id="username-error" class="field-error"><c:out value="${errors.username}"/></div>
                     <label class="form-label" for="email">Email address</label>
                     <input
                         class="form-control mb-3"
@@ -79,7 +91,7 @@
                 </form>
             </section>
             <form method="get" action="<c:out value='${usersUrl}'/>" class="d-flex flex-wrap gap-3 mb-3">
-                <label>Search name or email<input
+                <label>Search name, email or username<input
                     class="form-control"
                     name="q"
                     maxlength="100"
@@ -109,7 +121,7 @@
                         <c:forEach var="user" items="${result.items}">
                             <tr>
                                 <td class="record-id"><c:out value="${user.id}"/></td>
-                                <td><c:out value="${user.fullName}"/><br><c:out value="${user.email}"/></td>
+                                <td><c:out value="${user.fullName}"/><br><c:out value="${user.email}"/><br>Username: <c:out value="${empty user.username ? 'Not assigned' : user.username}"/></td>
                                 <td class="state-value"><c:out value="${user.role.displayName}"/></td>
                                 <td class="state-value"><c:out value="${user.active ? 'Active' : 'Inactive'}"/></td>
                                 <td>

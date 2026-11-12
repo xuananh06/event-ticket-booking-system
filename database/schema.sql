@@ -23,12 +23,16 @@ BEGIN TRY
     CREATE TABLE dbo.users (
         id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_users PRIMARY KEY,
         email NVARCHAR(254) COLLATE Latin1_General_100_CI_AS_SC NOT NULL,
+        username NVARCHAR(30) COLLATE Latin1_General_100_BIN2 NULL,
         password_hash VARCHAR(255) COLLATE Latin1_General_100_BIN2 NOT NULL,
         full_name NVARCHAR(150) NOT NULL,
         role VARCHAR(16) COLLATE Latin1_General_100_BIN2 NOT NULL,
         is_active BIT NOT NULL CONSTRAINT DF_users_active DEFAULT 1,
         created_at DATETIME2(3) NOT NULL CONSTRAINT DF_users_created DEFAULT SYSUTCDATETIME(),
         CONSTRAINT UQ_users_email UNIQUE (email),
+        CONSTRAINT CK_users_username CHECK (username IS NULL OR (
+            DATALENGTH(username) BETWEEN 6 AND 60
+            AND username NOT LIKE N'%[^-a-z0-9._]%')),
         CONSTRAINT CK_users_email_normalized CHECK (
             email COLLATE Latin1_General_100_BIN2 = LOWER(LTRIM(RTRIM(email))) COLLATE Latin1_General_100_BIN2
             AND DATALENGTH(email) = DATALENGTH(LTRIM(RTRIM(email)))
@@ -178,6 +182,7 @@ BEGIN TRY
         CONSTRAINT CK_payments_refund_time CHECK (refunded_at IS NULL OR refunded_at >= succeeded_at)
     );
 
+    EXEC(N'CREATE UNIQUE INDEX UX_users_username ON dbo.users(username) WHERE username IS NOT NULL;');
     CREATE UNIQUE INDEX UX_payments_one_success ON dbo.payments(booking_id) WHERE succeeded_at IS NOT NULL;
     CREATE INDEX IX_events_status_start ON dbo.events(status, starts_at, id) INCLUDE (category_id, venue_id, title);
     CREATE INDEX IX_events_category_status_start ON dbo.events(category_id, status, starts_at, id);

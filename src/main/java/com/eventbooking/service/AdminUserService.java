@@ -43,20 +43,21 @@ public final class AdminUserService {
         });
     }
 
-    public long create(long actor, String name, String email, String password, String confirmation, Role role, boolean active) {
-        AccountValidation.Fields fields = AccountValidation.registration(name, email, password, confirmation, passwords);
+    public long create(long actor, String name, String username, String email, String password, String confirmation, Role role, boolean active) {
+        AccountValidation.Fields fields = AccountValidation.registration(name, username, email, password, confirmation, passwords);
         if (role == null) {
             throw Inputs.invalid("role", "Choose a valid role.");
         }
         String hash = passwords.hash(password);
         return database.write(c -> {
             ActorDao.require(c, actor, Role.ADMIN);
-            return users.create(c, fields.name(), fields.email(), hash, role, active);
+            try { return users.create(c, fields.name(), fields.username(), fields.email(), hash, role, active); }
+            catch (SQLException error) { throw AccountConflicts.failure(error); }
         });
     }
 
-    public void save(long actor, long id, String name, String email, Role role, boolean active) {
-        AccountValidation.Fields fields = AccountValidation.profile(name, email);
+    public void save(long actor, long id, String name, String username, String email, Role role, boolean active) {
+        AccountValidation.Fields fields = AccountValidation.profile(name, username, email);
         if (role == null) {
             throw Inputs.invalid("role", "Choose a valid role.");
         }
@@ -64,7 +65,11 @@ public final class AdminUserService {
             ActorDao.require(c, actor, Role.ADMIN);
             ManagedUser previous = users.find(c, id);
             guard(c, actor, previous, role, active, false);
-            users.save(c, id, fields.name(), fields.email(), role, active);
+            if (previous.username() != null && fields.username() == null) {
+                throw Inputs.invalid("username", "An assigned username cannot be cleared.");
+            }
+            try { users.save(c, id, fields.name(), fields.username(), fields.email(), role, active); }
+            catch (SQLException error) { throw AccountConflicts.failure(error); }
             return null;
         });
     }
@@ -74,7 +79,7 @@ public final class AdminUserService {
             ActorDao.require(c, actor, Role.ADMIN);
             ManagedUser previous = users.find(c, id);
             guard(c, actor, previous, previous.role(), active, false);
-            users.save(c, id, previous.fullName(), previous.email(), previous.role(), active);
+            users.save(c, id, previous.fullName(), previous.username(), previous.email(), previous.role(), active);
             return null;
         });
     }

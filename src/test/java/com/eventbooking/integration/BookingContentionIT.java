@@ -110,7 +110,7 @@ class BookingContentionIT {
                     access -> new BookingService(access, x.dao).hold(x.customer, x.event, x.selection(0)),
                     access -> {
                         new AdminUserService(access, new AdminUserDao(), new com.eventbooking.security.PasswordHasher())
-                                .save(x.f.admin, x.customer, profile.fullName(), profile.email(), Role.ORGANIZER, true);
+                                .save(x.f.admin, x.customer, profile.fullName(), profile.username(), profile.email(), Role.ORGANIZER, true);
                         return "changed";
                     });
             assertEquals(1, outcomes.stream().filter(result -> result.status() == 200).count());

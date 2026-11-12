@@ -22,10 +22,11 @@ BEGIN TRY
         OR EXISTS (SELECT 1 FROM dbo.payments)
         THROW 51002, 'Seed requires empty application tables; no existing rows were changed.', 1;
 
-    INSERT dbo.users (email, password_hash, full_name, role) VALUES
-        (N'admin@example.test', '$2a$12$8sLxuN1aT.wm806ikXm4iufWpbJ0kqT38XeqMH54GxaOl0aCLE2wu', N'Demo Admin', 'ADMIN'),
-        (N'organizer@example.test', '$2a$12$iIT9r.59GXH7qc6CL9dDaOSlOMEeK2slLSSFYB.2k8HZTicE0DvMm', N'Demo Organizer', 'ORGANIZER'),
-        (N'customer@example.test', '$2a$12$jcyl9.1vEgH1cH6GkDHRxOrm44P8jZbLrHziGlB1YyYU57GoSqGpq', N'Demo Customer', 'CUSTOMER');
+    -- Bind the new column only after the populated-database guard has run.
+    EXEC(N'INSERT dbo.users (email, username, password_hash, full_name, role) VALUES
+        (N''admin@example.test'', N''admin'', ''$2a$12$8sLxuN1aT.wm806ikXm4iufWpbJ0kqT38XeqMH54GxaOl0aCLE2wu'', N''Demo Admin'', ''ADMIN''),
+        (N''organizer@example.test'', N''organizer'', ''$2a$12$iIT9r.59GXH7qc6CL9dDaOSlOMEeK2slLSSFYB.2k8HZTicE0DvMm'', N''Demo Organizer'', ''ORGANIZER''),
+        (N''customer@example.test'', N''customer'', ''$2a$12$jcyl9.1vEgH1cH6GkDHRxOrm44P8jZbLrHziGlB1YyYU57GoSqGpq'', N''Demo Customer'', ''CUSTOMER'');');
 
     INSERT dbo.categories (name) VALUES (N'Music'), (N'Workshops');
     INSERT dbo.venues (name, address) VALUES (N'University Auditorium', N'University campus, Ho Chi Minh City');
@@ -47,7 +48,7 @@ BEGIN TRY
     INSERT dbo.event_seats (event_id, seat_id, venue_id, price)
         SELECT e.id, s.id, e.venue_id, CASE WHEN e.category_id = @music THEN 150000.00 ELSE 50000.00 END
         FROM dbo.events e JOIN dbo.seats s ON s.venue_id = e.venue_id;
-    -- Booking, item and payment history intentionally start empty in P1.
+    -- Booking, item and payment history intentionally start empty.
     COMMIT TRANSACTION;
 END TRY
 BEGIN CATCH

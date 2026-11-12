@@ -45,7 +45,7 @@ public final class LoginServlet extends HttpServlet {
             return;
         }
         try {
-            UserProfile user = auth.authenticate(request.getParameter("email"), request.getParameter("password"));
+            UserProfile user = auth.authenticate(request.getParameter("identifier"), request.getParameter("password"));
             HttpSession session = request.getSession(false);
             if (session == null) {
                 Web.error(request, response, 403, "Your sign-in form has expired. Reopen the page and try again.");
@@ -59,12 +59,12 @@ public final class LoginServlet extends HttpServlet {
         } catch (ValidationException invalid) {
             response.setStatus(400);
             request.setAttribute("errors", invalid.getErrors());
-            request.setAttribute("email", Web.safeInput(request.getParameter("email"), 254));
+            request.setAttribute("identifier", Web.safeInput(request.getParameter("identifier"), 254));
             show(request, response);
         } catch (InvalidCredentialsException invalid) {
             response.setStatus(401);
             request.setAttribute("errorMessage", invalid.getMessage());
-            request.setAttribute("email", Web.safeInput(request.getParameter("email"), 254));
+            request.setAttribute("identifier", Web.safeInput(request.getParameter("identifier"), 254));
             show(request, response);
         } catch (ServiceUnavailableException unavailable) {
             Web.error(request, response, 503, Web.UNAVAILABLE);

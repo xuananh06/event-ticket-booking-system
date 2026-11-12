@@ -26,7 +26,7 @@ class StatisticsHttpCheck {
         status(404, guest.get("WEB-INF/views/account/sales-statistics.jspf"));
         if (!"AVAILABLE".equals(System.getProperty("auth.databaseExpected"))) {
             var login = guest.get("login"); status(200, login);
-            var failed = guest.post("login", fields("_csrf", token(login.body()), "email", "customer@example.test", "password", "irrelevant"));
+            var failed = guest.post("login", fields("_csrf", token(login.body()), "identifier", "customer@example.test", "password", "irrelevant"));
             status(503, failed); assertFalse(failed.body().contains("id=\"metric-"));
             System.out.println("HTTP statistics guest and unavailable boundaries: PASS");
             return;

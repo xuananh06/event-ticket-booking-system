@@ -26,7 +26,7 @@ final class P3Fixture implements AutoCloseable {
 
     long user(String role) throws Exception {
         String email = db.email();
-        long id = db.auth.register("Fixture Member", email, PASSWORD, PASSWORD);
+        long id = db.auth.register("Fixture Member", TestDatabase.usernameFor(email), email, PASSWORD, PASSWORD);
         db.changeAccount(email, role, true);
         return id;
     }
