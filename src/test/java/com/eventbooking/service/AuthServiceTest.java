@@ -30,6 +30,7 @@ class AuthServiceTest {
     private static class Users extends UserDao {
         UserAccount account;
         String email;
+        String username;
         String name;
         String storedHash;
         SQLException failure;
@@ -40,11 +41,12 @@ class AuthServiceTest {
         }
 
         @Override
-        public long createCustomer(String name, String email, String hash) throws SQLException {
+        public long createCustomer(String name, String username, String email, String hash) throws SQLException {
             if (failure != null) {
                 throw failure;
             }
             this.name = name;
+            this.username = username;
             this.email = email;
             storedHash = hash;
             writes++;
@@ -57,6 +59,13 @@ class AuthServiceTest {
                 throw failure;
             }
             this.email = email;
+            return Optional.ofNullable(account);
+        }
+
+        @Override
+        public Optional<UserAccount> findByUsername(String username) throws SQLException {
+            if (failure != null) { throw failure; }
+            this.username = username;
             return Optional.ofNullable(account);
         }
 
@@ -87,9 +96,10 @@ class AuthServiceTest {
     @Test
     void registrationNormalizesSafeFieldsAndHashesUntrimmedPassword() {
         Users users = new Users();
-        assertEquals(7, new AuthService(users, new PasswordHasher()).register("  Demo Customer  ", " DEMO@EXAMPLE.TEST ", PASSWORD, PASSWORD));
+        assertEquals(7, new AuthService(users, new PasswordHasher()).register("  Demo Customer  ", " Demo_User-1.2 ", " DEMO@EXAMPLE.TEST ", PASSWORD, PASSWORD));
         assertEquals("Demo Customer", users.name);
         assertEquals("demo@example.test", users.email);
+        assertEquals("demo_user-1.2", users.username);
         assertTrue(new PasswordHasher().matches(PASSWORD, users.storedHash));
         assertFalse(new PasswordHasher().matches(PASSWORD.trim(), users.storedHash));
         assertTrue(users.storedHash.startsWith("$2a$12$"));
@@ -101,14 +111,14 @@ class AuthServiceTest {
         Users users = new Users();
         AuthService service = new AuthService(users, new PasswordHasher());
         ValidationException error = assertThrows(ValidationException.class,
-                () -> service.register(" ", "a..b@example.test", "short", "different"));
-        assertEquals(java.util.Set.of("fullName", "email", "password", "confirmation"), error.getErrors().keySet());
+                () -> service.register(" ", "", "a..b@example.test", "short", "different"));
+        assertEquals(java.util.Set.of("fullName", "username", "email", "password", "confirmation"), error.getErrors().keySet());
         assertEquals(0, users.writes);
-        assertThrows(ValidationException.class, () -> service.register("x".repeat(151), "a@example.test", PASSWORD, PASSWORD));
-        assertThrows(ValidationException.class, () -> service.register("Name\nInjected", "a@example.test", PASSWORD, PASSWORD));
+        assertThrows(ValidationException.class, () -> service.register("x".repeat(151), "member", "a@example.test", PASSWORD, PASSWORD));
+        assertThrows(ValidationException.class, () -> service.register("Name\nInjected", "member", "a@example.test", PASSWORD, PASSWORD));
         // Includes an explicit Unicode email fixture to verify the documented ASCII email rule.
         for (String email : new String[]{"a@localhost", "a@@example.test", "đ@example.test", "a@-bad.test", "a".repeat(65) + "@example.test", "a".repeat(255) + "@example.test"}) {
-            assertThrows(ValidationException.class, () -> service.register("Name", email, PASSWORD, PASSWORD));
+            assertThrows(ValidationException.class, () -> service.register("Name", "member", email, PASSWORD, PASSWORD));
         }
     }
 
@@ -116,9 +126,9 @@ class AuthServiceTest {
     void duplicateEmailIsAControlledFieldErrorButOtherSqlFailuresAreUnavailable() {
         Users users = new Users();
         AuthService service = new AuthService(users, new PasswordHasher());
-        users.failure = new SQLException("private server details", "23000", 2627);
+        users.failure = new SQLException("Constraint 'UQ_users_email'; private server details", "23000", 2627);
         ValidationException duplicate = assertThrows(ValidationException.class,
-                () -> service.register("Name", "a@example.test", PASSWORD, PASSWORD));
+                () -> service.register("Name", "member", "a@example.test", PASSWORD, PASSWORD));
         assertEquals(java.util.Set.of("email"), duplicate.getErrors().keySet());
         users.failure = new SQLException("secret connection information", "08001", 0);
         ServiceUnavailableException unavailable = assertThrows(ServiceUnavailableException.class,
@@ -135,6 +145,39 @@ class AuthServiceTest {
         assertEquals(7, profile.getId());
         assertEquals(Role.CUSTOMER, profile.getRole());
         assertFalse(profile.toString().contains(hash));
+    }
+
+    @Test
+    void bothIdentifiersUseTheSamePasswordFlowForEveryRole() {
+        Users users = new Users();
+        AuthService service = new AuthService(users, new PasswordHasher());
+        for (Role role : Role.values()) {
+            users.account = new UserAccount(new UserProfile(7, "demo@example.test", "Member", role), true, hash);
+            assertEquals(role, service.authenticate(" Demo.User_1-2 ", PASSWORD).getRole());
+            assertEquals("demo.user_1-2", users.username);
+            assertEquals(role, service.authenticate(" DEMO@EXAMPLE.TEST ", PASSWORD).getRole());
+            assertEquals("demo@example.test", users.email);
+        }
+        users.account = null;
+        assertThrows(InvalidCredentialsException.class, () -> service.authenticate("unknown-user", "DemoOnly!ChangeMe"));
+        assertThrows(InvalidCredentialsException.class, () -> service.authenticate("unknown@example.test", "DemoOnly!ChangeMe"));
+    }
+
+    @Test
+    void usernameFailuresRemainGenericAndMalformedIdentifiersNeverReachTheDao() {
+        Users users = new Users();
+        AuthService service = new AuthService(users, new PasswordHasher());
+        for (String invalid : new String[]{"ab", "a@@example.test", "\u212aelvin", "<script>", "has space"}) {
+            assertEquals(java.util.Set.of("identifier"), assertThrows(ValidationException.class,
+                    () -> service.authenticate(invalid, PASSWORD)).getErrors().keySet());
+            assertNull(users.username); assertNull(users.email);
+        }
+        String absent = assertThrows(InvalidCredentialsException.class, () -> service.authenticate("unknown-user", PASSWORD)).getMessage();
+        users.account = account(true);
+        assertEquals(absent, assertThrows(InvalidCredentialsException.class, () -> service.authenticate("demo-user", "incorrect pass")).getMessage());
+        users.account = account(false);
+        assertEquals(absent, assertThrows(InvalidCredentialsException.class, () -> service.authenticate("demo-user", PASSWORD)).getMessage());
+        assertEquals(absent, assertThrows(InvalidCredentialsException.class, () -> service.authenticate("demo@example.test", PASSWORD)).getMessage());
     }
 
     @Test
@@ -167,7 +210,7 @@ class AuthServiceTest {
     @Test
     void noDatabaseIsAServiceFailureForAllDatabaseDependentOperations() {
         AuthService service = new AuthService(new UserDao(Optional.empty()), new PasswordHasher());
-        assertThrows(ServiceUnavailableException.class, () -> service.register("Name", "a@example.test", PASSWORD, PASSWORD));
+        assertThrows(ServiceUnavailableException.class, () -> service.register("Name", "member", "a@example.test", PASSWORD, PASSWORD));
         assertThrows(ServiceUnavailableException.class, () -> service.authenticate("a@example.test", PASSWORD));
         assertThrows(ServiceUnavailableException.class, () -> service.currentUser(1));
     }

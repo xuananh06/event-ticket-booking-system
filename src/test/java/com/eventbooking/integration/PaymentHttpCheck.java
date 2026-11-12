@@ -17,7 +17,7 @@ class PaymentHttpCheck {
         guest.redirect(guest.post("customer/bookings/pay", fields("_csrf", token(guest.get("login").body()), "bookingId", "1", "paymentKey", P6Fixture.key(), "outcome", "success")), "login");
         if (!"AVAILABLE".equals(System.getProperty("auth.databaseExpected"))) {
             status(200, guest.get("health")); status(200, guest.get("login"));
-            status(503, guest.post("login", fields("_csrf", token(guest.get("login").body()), "email", "customer@campus.test", "password", "irrelevant")));
+            status(503, guest.post("login", fields("_csrf", token(guest.get("login").body()), "identifier", "customer@campus.test", "password", "irrelevant")));
             System.out.println("HTTP payment guest boundaries and unavailable foundation: PASS"); return;
         }
         try (P6Fixture x = new P6Fixture(12)) {

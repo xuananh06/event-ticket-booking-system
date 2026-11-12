@@ -27,6 +27,7 @@ public final class AdminUserServlet extends HttpServlet {
                 ManagedUser u = service.find(ManagementWeb.actor(request), id);
                 form.put("id", String.valueOf(id));
                 form.put("fullName", u.fullName());
+                form.put("username", u.username());
                 form.put("email", u.email());
                 form.put("role", u.role().name());
                 form.put("active", String.valueOf(u.active()));
@@ -40,7 +41,7 @@ public final class AdminUserServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        Map<String, String> form = ManagementWeb.form(request, "id", "fullName", "email", "role", "active");
+        Map<String, String> form = ManagementWeb.form(request, "id", "fullName", "username", "email", "role", "active");
         request.setAttribute("form", form);
         try {
             long actor = ManagementWeb.actor(request);
@@ -50,9 +51,9 @@ public final class AdminUserServlet extends HttpServlet {
                 Role role = AdminUserService.role(form.get("role"));
                 boolean active = Inputs.active(form.get("active"));
                 if (id == null) {
-                    service.create(actor, form.get("fullName"), form.get("email"), request.getParameter("password"), request.getParameter("confirmation"), role, active);
+                    service.create(actor, form.get("fullName"), form.get("username"), form.get("email"), request.getParameter("password"), request.getParameter("confirmation"), role, active);
                 } else {
-                    service.save(actor, id, form.get("fullName"), form.get("email"), role, active);
+                    service.save(actor, id, form.get("fullName"), form.get("username"), form.get("email"), role, active);
                 }
             } else if ("status".equals(action)) {
                 service.status(actor, Inputs.id(form.get("id"), "id"), Inputs.active(form.get("active")));
@@ -64,6 +65,7 @@ public final class AdminUserServlet extends HttpServlet {
             ManagementWeb.success(request, response, "/admin/users");
         } catch (ValidationException invalid) {
             response.setStatus(400);
+            form.put("username", Web.safeInput(form.get("username"), 64));
             request.setAttribute("errors", invalid.getErrors());
             try {
                 render(request, response);

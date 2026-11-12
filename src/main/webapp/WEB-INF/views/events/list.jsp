@@ -9,7 +9,7 @@
         <%@ include file="../common/navigation.jspf" %>
         <main id="main-content" class="container page-content">
             <h1 class="h2">Upcoming events</h1>
-            <p class="text-secondary">Explore your university community. Times are shown in Asia/Bangkok.</p>
+            <p class="text-secondary">Find upcoming public events. Times are shown in Asia/Bangkok.</p>
             <c:url var="eventsUrl" value="/events"/>
             <form method="get" action="<c:out value='${eventsUrl}'/>" class="account-card mt-0">
                 <div class="row g-3">

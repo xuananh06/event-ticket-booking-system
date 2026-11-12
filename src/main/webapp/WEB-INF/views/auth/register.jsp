@@ -9,9 +9,8 @@
         <%@ include file="../common/navigation.jspf" %>
         <main id="main-content" class="container page-content">
             <section class="auth-card mx-auto">
-                <p class="eyebrow">WELCOME TO THE COMMUNITY</p>
                 <h1 class="h2 fw-bold">Create your account</h1>
-                <p class="text-secondary mb-4">A personal space to connect with your campus.</p>
+                <p class="text-secondary mb-4">Create an account to book seats and manage your reservations.</p>
                 <%@ include file="../common/messages.jspf" %>
                 <form method="post" action="<c:out value='${registerUrl}'/>">
                     <input type="hidden" name="_csrf" value="<c:out value='${csrfToken}'/>">
@@ -27,6 +26,21 @@
                             value="<c:out value='${fullName}'/>"
                             aria-describedby="fullName-error">
                         <div id="fullName-error" class="field-error"><c:out value="${errors.fullName}"/></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="username">Username</label>
+                        <input
+                            class="form-control"
+                            id="username" aria-invalid="${not empty errors.username}"
+                            name="username"
+                            type="text"
+                            autocomplete="username"
+                            maxlength="64"
+                            required
+                            value="<c:out value='${username}'/>"
+                            aria-describedby="username-help username-error">
+                        <div id="username-help" class="form-text">Use 3-30 ASCII letters, digits, periods, underscores or hyphens. Outer whitespace is removed; usernames are stored in lowercase. Do not use @.</div>
+                        <div id="username-error" class="field-error"><c:out value="${errors.username}"/></div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="email">Email address</label>

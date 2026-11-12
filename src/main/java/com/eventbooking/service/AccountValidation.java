@@ -11,11 +11,12 @@ import java.util.regex.Pattern;
  */
 public final class AccountValidation {
     private static final Pattern EMAIL = Pattern.compile("[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}");
+    private static final Pattern USERNAME = Pattern.compile("[A-Za-z0-9._-]{3,30}");
 
     private AccountValidation() {
     }
 
-    public record Fields(String name, String email) {
+    public record Fields(String name, String username, String email) {
     }
 
     public static String normalize(String email) {
@@ -30,9 +31,17 @@ public final class AccountValidation {
         return errors;
     }
 
-    public static String credentials(String email, String password, PasswordHasher passwords) {
-        String normalized = normalize(email);
-        Map<String, String> errors = emailErrors(normalized);
+    public static String credentials(String identifier, String password, PasswordHasher passwords) {
+        String input = identifier == null ? "" : identifier.strip();
+        Map<String, String> errors = new LinkedHashMap<>();
+        String normalized;
+        if (input.contains("@")) {
+            normalized = normalize(input);
+            String error = emailErrors(normalized).get("email");
+            if (error != null) { errors.put("identifier", error); }
+        } else {
+            normalized = username(errors, input, true, "identifier");
+        }
         passwordErrors(errors, password, passwords);
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
@@ -46,17 +55,28 @@ public final class AccountValidation {
         }
     }
 
-    public static Fields profile(String name, String email) {
-        return validate(name, email, null, null, null);
+    private static String username(Map<String, String> errors, String value, boolean required, String field) {
+        String input = value == null ? "" : value.strip();
+        if (input.isEmpty() && !required) { return null; }
+        // Validate ASCII before lowercasing; Unicode case folding must not admit other characters.
+        if (!USERNAME.matcher(input).matches()) {
+            errors.put(field, "Use 3-30 ASCII letters, digits, periods, underscores or hyphens. Do not use @.");
+        }
+        return input.toLowerCase(Locale.ROOT);
     }
 
-    public static Fields registration(String name, String email, String password, String confirmation, PasswordHasher passwords) {
-        return validate(name, email, password, confirmation, passwords);
+    public static Fields profile(String name, String username, String email) {
+        return validate(name, username, email, null, null, null);
     }
 
-    private static Fields validate(String name, String email, String password, String confirmation, PasswordHasher passwords) {
+    public static Fields registration(String name, String username, String email, String password, String confirmation, PasswordHasher passwords) {
+        return validate(name, username, email, password, confirmation, passwords);
+    }
+
+    private static Fields validate(String name, String username, String email, String password, String confirmation, PasswordHasher passwords) {
         String normalized = normalize(email), display = name == null ? "" : name.strip();
         Map<String, String> errors = emailErrors(normalized);
+        String normalizedUsername = username(errors, username, passwords != null, "username");
         if (display.isEmpty() || display.length() > 150 || display.codePoints().anyMatch(Character::isISOControl)) {
             errors.put("fullName", "Enter a name of 1-150 characters without control characters.");
         }
@@ -69,6 +89,6 @@ public final class AccountValidation {
         if (!errors.isEmpty()) {
             throw new ValidationException(errors);
         }
-        return new Fields(display, normalized);
+        return new Fields(display, normalizedUsername, normalized);
     }
 }

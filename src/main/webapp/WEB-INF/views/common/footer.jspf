@@ -1,6 +1,6 @@
 <footer class="site-footer">
     <div class="container d-flex flex-wrap justify-content-between gap-2 py-4">
-        <span>Campus Events</span><span>A place for your university community.</span>
+        <span>Event Ticket Booking</span>
     </div>
 </footer>
 <c:url var="formFeedbackUrl" value="/assets/js/form-feedback.js"/>

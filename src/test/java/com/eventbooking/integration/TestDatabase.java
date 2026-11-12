@@ -44,6 +44,16 @@ final class TestDatabase implements AutoCloseable {
         return email;
     }
 
+    static String usernameFor(String email) {
+        String key = email.strip().toLowerCase(java.util.Locale.ROOT);
+        return "u-" + UUID.nameUUIDFromBytes(key.getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString().replace("-", "").substring(0, 28);
+    }
+
+    long legacyUser(String name, String email, String password) throws SQLException {
+        requireOwned(email);
+        return new UserDao(Optional.of(source)).createCustomer(name, null, email, new PasswordHasher().hash(password));
+    }
+
     void changeAccount(String email, String role, boolean active) throws SQLException {
         requireOwned(email);
         try (Connection connection = source.getConnection(); PreparedStatement statement = connection.prepareStatement(

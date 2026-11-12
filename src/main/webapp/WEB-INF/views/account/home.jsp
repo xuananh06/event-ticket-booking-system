@@ -9,7 +9,7 @@
         <%@ include file="../common/navigation.jspf" %>
         <main id="main-content" class="container page-content">
             <section class="account-card" data-role="<c:out value='${currentUser.role}'/>">
-                <p class="eyebrow">YOUR CAMPUS EVENTS ACCOUNT</p>
+                <p class="eyebrow">YOUR ACCOUNT</p>
                 <h1 class="h2 fw-bold">Welcome, <c:out value="${currentUser.fullName}"/>.</h1>
                 <p class="text-secondary">You are signed in. This is your account's welcome page.</p>
                 <dl class="row account-details mt-4 mb-0">

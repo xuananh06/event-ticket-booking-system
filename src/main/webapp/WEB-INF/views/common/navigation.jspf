@@ -9,7 +9,7 @@
     <nav
         class="container d-flex flex-wrap align-items-center justify-content-between gap-3 py-3"
         aria-label="Main navigation">
-        <a class="brand" href="<c:out value='${publicHomeUrl}'/>" aria-current="${empty navigationPath ? 'page' : 'false'}"><span class="brand-mark" aria-hidden="true">C</span>Campus Events</a>
+        <a class="brand" href="<c:out value='${publicHomeUrl}'/>" aria-current="${empty navigationPath ? 'page' : 'false'}"><span class="brand-mark" aria-hidden="true">E</span>Event Ticket Booking</a>
         <div class="d-flex flex-wrap align-items-center gap-3">
             <a class="nav-link" href="<c:out value='${browseUrl}'/>" aria-current="${navigationPath == '/events' ? 'page' : (navigationPath.startsWith('/events/') ? 'location' : 'false')}">Browse events</a>
             <c:if test="${currentUser.role == 'ADMIN'}">

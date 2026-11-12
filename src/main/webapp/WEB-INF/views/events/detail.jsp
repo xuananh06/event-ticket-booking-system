@@ -11,7 +11,6 @@
             <c:url var="eventsUrl" value="/events"/>
             <a href="<c:out value='${eventsUrl}'/>">Back to events</a>
             <article class="account-card">
-                <p class="eyebrow">UNIVERSITY EVENTS</p>
                 <h1 class="h2"><c:out value="${event.title}"/></h1>
                 <dl class="row mt-4">
                     <dt class="col-sm-3">Category</dt>

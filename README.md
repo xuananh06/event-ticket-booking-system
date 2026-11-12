@@ -6,7 +6,7 @@ A Java web project for event ticket booking and seat reservation. The applicatio
 
 Implemented:
 
-- Customer registration, login for three roles, and POST-only logout.
+- Customer registration with a required username, email-or-username sign-in for three roles, and POST-only logout.
 - Bcrypt password hashing, session ID rotation, session-bound CSRF protection, and current account/role checks on protected requests.
 - English, responsive Bootstrap views with shared navigation, field errors, safe input retention, UTF-8, and escaped user content.
 - Admin category, venue, physical-seat and account management, active-state controls and guarded deletion.
@@ -83,23 +83,37 @@ The schema has nine tables: `users`, `categories`, `venues`, `seats`, `events`, 
 - `BIGINT IDENTITY` keys, Unicode `NVARCHAR`, `DECIMAL(18,2)` VND amounts, and UTC `DATETIME2(3)` fields.
 - Composite foreign keys for event/seat venue consistency, booking/item event consistency, and current inventory ownership.
 - Explicit inventory owner/expiry shapes, booking/payment timestamp shapes, nonnegative amounts, and a maximum five-minute booking deadline.
-- Unique email, physical layouts, per-event seats, booking codes, per-booking seat items, and per-booking payment keys.
+- Unique email, optional normalized usernames, physical layouts, per-event seats, booking codes, per-booking seat items, and per-booking payment keys.
+- A filtered unique username index permits multiple legacy accounts with no assigned username. Assigned usernames are lowercase ASCII, 3-30 characters, using letters, digits, periods, underscores and hyphens.
 - A filtered unique index on successful payment history, retained after refund, and indexes for event searches, booking history, and inventory availability.
 - No cascading deletion of transaction history. Historical items may reference the same seat in different bookings.
 
 Email must equal SQL Server `LOWER(LTRIM(RTRIM(email)))`, without leading/trailing ASCII spaces. Its explicit collation is `Latin1_General_100_CI_AS_SC`: uniqueness is case insensitive and accent sensitive. Public account forms accept ASCII email addresses and normalize them with locale-independent lowercase before database access. Statuses use binary collation and reject trailing spaces. Constraints alone do not establish booking ownership, matching item totals/deadlines, minimum item counts or safe allocation; reservation service transactions enforce those rules alongside the retained constraints.
 
+### Upgrade an existing database
+
+Run `database/migrations/001_add_usernames.sql` against the existing application database before deploying the username-capable WAR. Use a setup login authorized to alter the users table and its constraints/indexes. Pause application writes during the migration and deployment. Select the actual intended database; keep SQL credentials out of command arguments:
+
+```powershell
+sqlcmd -S localhost -U setup_login -d event_booking_p1_test -b -f 65001 -i database/migrations/001_add_usernames.sql
+if ($LASTEXITCODE -ne 0) { throw 'Username migration failed; deployment stopped.' }
+```
+
+SSMS can execute the same UTF-8 file after selecting the existing database. The application does not run migrations automatically. Do not rerun schema.sql or seed.sql to upgrade a populated database.
+
+The migration adds nullable `users.username` without assigning names to existing accounts or changing IDs, email addresses, password hashes, roles or transaction history. Existing accounts continue signing in with email. Admin can assign usernames later. The transactional migration is safe to repeat: it revalidates the username CHECK constraint and checks the filtered unique index. Incompatible column/index definitions or invalid existing usernames fail rather than rewriting data. Run it with the required schema permissions even on a repeat. Verify the command's exit status before deploying the updated application.
+
 ### Demo data and password format
 
 Seed creates three accounts, two categories, one venue, eight physical seats, two events sharing the venue, and sixteen independent event-seat rows. Events start relative to `SYSUTCDATETIME()`. One is PUBLISHED and one DRAFT. Booking/item/payment tables remain empty.
 
-| Account | Role | Public demo password |
-| --- | --- | --- |
-| `admin@example.test` | ADMIN | `DemoOnly!ChangeMe` |
-| `organizer@example.test` | ORGANIZER | `DemoOnly!ChangeMe` |
-| `customer@example.test` | CUSTOMER | `DemoOnly!ChangeMe` |
+| Email | Username on a fresh seed | Role | Public demo password |
+| --- | --- | --- | --- |
+| `admin@example.test` | `admin` | ADMIN | `DemoOnly!ChangeMe` |
+| `organizer@example.test` | `organizer` | ORGANIZER | `DemoOnly!ChangeMe` |
+| `customer@example.test` | `customer` | CUSTOMER | `DemoOnly!ChangeMe` |
 
-Use these public accounts on the sign-in page of a seeded test installation. They are application accounts, separate from database connection credentials. Keep demo accounts out of a public deployment. New seed installations use English demo labels; existing account names and other stored records are preserved when the application is updated.
+Use either identifier on a freshly seeded test installation. Existing migrated seed accounts retain their email sign-in and have no username until Admin assigns one; migration does not backfill the usernames in this table. These are application accounts, separate from database connection credentials. Keep demo accounts out of a public deployment. Existing account names and other stored records are preserved when the application is updated.
 
 Seed and application password format: Favre bcrypt 0.10.2, `$2a$` format, cost **12**, independent cryptographic random salts, and 60-character encoded hashes. The schema enforces this format; changing algorithm or cost requires a schema migration. Registration and the offline helper accept passwords of 8-72 UTF-8 bytes, without trimming or truncation. Unit tests check the actual seed hashes with the correct and incorrect password.
 
@@ -119,7 +133,9 @@ The interactive command reads without echo in a terminal. It does not accept pas
 
 Open the application root, then select **Create account** or **Sign in**. Registration always creates an active CUSTOMER, regardless of submitted role or activation fields. Successful registration redirects to sign-in with a one-time success message; it does not automatically authenticate the account.
 
-Names support Unicode and allow 1-150 UTF-16 code units after stripping outer whitespace. Control characters are rejected. Email addresses allow at most 254 ASCII characters, including at most 64 before `@`. Password confirmation must match exactly. Validation retains only the name and email; password fields remain empty. Client validation supplements the server checks.
+Names support Unicode and allow 1-150 UTF-16 code units after stripping outer whitespace. Control characters are rejected. Email addresses allow at most 254 ASCII characters, including at most 64 before `@`. New accounts require a username of 3-30 ASCII letters, digits, periods, underscores or hyphens. Outer whitespace is stripped and usernames are stored in locale-independent lowercase; `@` and other characters are rejected. Case variants identify the same username. Password confirmation must match exactly. Registration validation retains safe name, username and email input; password fields remain empty. Client validation supplements the server checks.
+
+The **Email or username** text field uses `autocomplete="username"` and submits the form field `identifier` alongside `password`. Input containing `@` uses email validation and email lookup; other input uses normalized username lookup. Both use the same password verification, active-account checks, role redirects and session rotation. Sign-in errors retain only safe escaped identifier input, never the password. A legacy account without a username can use its email.
 
 | Route, relative to the deployed context | Behavior |
 | --- | --- |
@@ -169,7 +185,7 @@ Each summary revalidates the current active role and reads through one bounded S
 
 Admin navigation provides Categories, Venues, Seats and Accounts. Lists include inactive records and accept page/state filters. Categories have unique names; seats have a unique venue/row/number combination. Deletion removes only unreferenced records. Database references produce a controlled 409 conflict, preserving related records/history. A category or venue required by an upcoming published event cannot be deactivated. Seats used by event inventory cannot be moved, relabeled, deactivated or deleted through management.
 
-Account creation accepts a valid role, initial state and confirmed password. Profile/role/state edits preserve the hash. Administrators cannot disable, delete or demote themselves or remove the last active administrator. Event owners must retain ORGANIZER and booking owners must retain CUSTOMER. Referenced users may be disabled when permitted, with history retained. Every mutation revalidates the actor inside its transaction.
+Account creation requires a username, valid role, initial state and confirmed password. Admin can assign or change a username. An unrelated edit can leave a legacy account unassigned; an assigned username cannot be cleared. Status changes preserve the username. Duplicate username/email submissions return field-specific HTTP 400 validation errors, including competing registrations. Profile/role/state edits preserve the password hash. Administrators cannot disable, delete or demote themselves or remove the last active administrator. Event owners must retain ORGANIZER and booking owners must retain CUSTOMER. Referenced users may be disabled when permitted, with history retained. Every mutation revalidates the actor inside its transaction.
 
 Organizers can view only their own management records and mutate only DRAFT events. New events are always DRAFT; submitted owner/status fields cannot publish or transfer them through an ordinary save. Drafts with inventory/bookings cannot be deleted or moved to another venue. New assignments require active categories/venues; unchanged inactive references can remain on an existing draft and their labels remain visible. Descriptions are escaped plain text with preserved line breaks and a 10,000 UTF-16-unit limit. Titles allow up to 200 units. Drafts must start in the future and end after they start. Forms/display use Asia/Bangkok; JDBC stores UTC DATETIME2 with millisecond precision. Inventory setup and publication have stricter guards described below.
 
@@ -346,7 +362,7 @@ Open `http://localhost:8080/event-booking/health` for the default deployment, us
 - `-DatabaseConfigFile`: optional existing absolute file path, forwarded to both the actual Tomcat JVM and Maven's HTTP test JVM.
 - `-ExpectedDatabaseStatus`: NOT_CONFIGURED (default), AVAILABLE or UNAVAILABLE.
 - `-ContextName`: default event-booking; 1-50 letters/digits/underscores/hyphens, starting with a letter/digit; ROOT is unsupported.
-- `-AuthenticationTests`: runs all six authentication, management/catalog, inventory, reservation, payment/history and cancellation/refund HTTP scenarios. AVAILABLE needs a confirmed dedicated database and fixture permissions.
+- `-AuthenticationTests`: runs the registered authentication, management/catalog, inventory, reservation, payment/history, cancellation/refund, statistics and cross-role journey HTTP checks. AVAILABLE needs a confirmed dedicated database and fixture permissions.
 
 Windows PowerShell can block .ps1 execution before the smoke test starts. Inspect policy with the same executable:
 
@@ -378,7 +394,7 @@ The script verifies the actual Tomcat configuration-source log and the HTTP fork
 
 `mvn -B clean verify` runs database-independent Java 17 unit tests and builds the WAR. Focused tests cover file selection/precedence, UTF-8 and properties decoding, safe failures, centralized SQL settings and dedicated-database guards alongside existing security/business-unit checks.
 
-Use a dedicated SQL Server 2022 database already initialized with schema/seed and an existing SQL login. In file mode:
+Use a dedicated SQL Server 2022 database already initialized with schema/seed and an existing SQL login. For an existing installation, apply the username migration first. In file mode:
 
 ```powershell
 $env:EVENT_TEST_DB_CONFIRM = 'event_booking_p1_test'
@@ -393,9 +409,9 @@ mvn -B clean verify -Psqlserver-it '-Deventbooking.db.config=D:/My Project/confi
 
 The activated Maven profile explicitly forwards the selector to Surefire and Failsafe JVMs. The application and integration tests use the same loader and source-selection rules. EVENT_TEST_DB_CONFIRM must exactly match the resolved database name; file mode does not require a duplicate EVENT_DB_NAME. System databases are rejected and SQL Server major version 16 is checked before fixtures. In environment mode, omit the JVM selector and supply the complete SQL Authentication variables; keep the same explicit test confirmation.
 
-Missing credentials/connectivity fail the SQL profile rather than silently skipping. Do not reset/reseed populated data to obtain a pass. Rerun-safety checks compare all nine current table counts/content after each refused script, including existing financial history. Some foundation tests require the seeded reference/accounts and future sample events. Schema fixtures roll back; committed management/booking fixtures are cleaned by exact ownership. Identity counters may advance. The last-admin race creates and drops only its uniquely owned isolated schema; that test login needs CREATE SCHEMA/TABLE and cleanup permissions, while normal application operation does not.
+Missing credentials/connectivity fail the SQL profile rather than silently skipping. Do not reset/reseed populated data to obtain a pass. Rerun-safety checks compare all nine current table counts/content after each refused script, including existing financial history. Some foundation tests require the seeded reference/accounts and future sample events. Rollback fixtures and exact-owned cleanup preserve existing rows; identity counters may advance. The last-admin race and username fresh-install/migration tests create/drop only uniquely owned schemas, so the test login needs CREATE SCHEMA/TABLE and cleanup permissions. The migration test reapplies the supported users-table migration and requires its ALTER/index permissions. Normal application operation does not require these setup/test permissions.
 
-Schema checks cover JDBC/Unicode, trusted constraints, both venue foreign keys, booking/item/current-owner event matching, inventory shapes, historical seat references, payment key scope, success uniqueness after refund, normalized email, amount/time checks, deletion protection, and script rerun refusal. Registration checks cover persistence, compatible stored hashes, normalization, duplicate mapping, and one winner from competing inserts. Schema fixtures do not implement booking/payment application workflows. Management SQL checks additionally cover duplicate category/seat/email values, actor and reference guards, last-admin concurrency with two independent connections, role/history restrictions, draft ownership/status predicates, UTC persistence, inactive references, rollback on errors, public visibility, literal/combined filtering and stable pagination.
+Schema checks cover JDBC/Unicode, trusted constraints, both venue foreign keys, booking/item/current-owner event matching, inventory shapes, historical seat references, payment key scope, success uniqueness after refund, normalized email/usernames, amount/time checks, deletion protection, and script rerun refusal. Username migration checks cover original-column digests across all nine tables, a populated legacy booking/payment graph, repeat execution, fresh seed credentials and storage constraints. Registration checks cover persistence, compatible stored hashes, normalization, correct duplicate fields, and one winner from competing email/username inserts. HTTP checks exercise both identifiers for all roles, legacy email access, session/CSRF rotation, malformed fields, wrong passwords, inactive accounts, independent registration races and Admin username assignment/edit/status behavior. Management SQL checks additionally cover duplicate category/seat/email values, actor and reference guards, last-admin concurrency with two independent connections, role/history restrictions, draft ownership/status predicates, UTC persistence, inactive references, rollback on errors, public visibility, literal/combined filtering and stable pagination.
 
 Inventory SQL checks additionally cover additive/repeated generation, exact/free prices, mixed-ID batch atomicity, publication coverage/history guards, independent event prices, real connection races with pricing/generation/reference edits/publication, delayed publication across its start boundary, deterministic hold-expiry equality, public visibility, full-count paging and non-mutating availability reads.
 
@@ -403,7 +419,7 @@ Reservation SQL checks cover exact booking/items/deadlines, ownership, aggregate
 
 Payment/history/cancellation SQL checks cover exact success/failure/free amounts, immutable snapshots, replay across state/time changes, scoped keys and one lifetime success, effective filtered history and bounded attempts. Distinct real SERIALIZABLE connections exercise the production transaction work with and without shared application-lock coordination. Boundary and injected-failure checks prove complete rollback after financial inserts/refunds and partial seat updates. Payment/cancel, repeated cancel, expiry/takeover and rebooking races assert consistent financial/booking/inventory state and preservation of newer owners.
 
-The script's `-AuthenticationTests` switch runs eight JUnit HTTP scenarios with independent cookie sessions. Authentication checks registration, validation/escaping, three seeded role logins, all nine role-route pairs, negative/stale CSRF, session rotation/replay/logout, inactive/changed accounts, expiry and logout from authenticated POST error pages. Management/catalog checks real rendered forms, reference/account/event CRUD, role/ownership and credential-field tampering, CSRF rejection, public visibility, encoded paging and invalid inputs. Inventory checks rendered generation/pricing/publication forms, immutable setup, ownership/CSRF/tampering, effective public availability and validation/conflict logout. Reservations exercise actual non-first-page forms, corrected resubmission, server-derived fields, owned checkout, negative CSRF, mixed-seat atomicity, real session expiry without renewal, expired takeover and safe normalization/logout. Payment and cancellation use actual rendered forms to verify outcomes, retries/replays, history, full refunds, rebooking, critical duplicate-field rejection and error-page logout. Statistics checks rendered role summaries, scoped zeros, financial reconciliation, query-scope tampering, read-only behavior, safe failures, links and logout. The integrated journey creates accounts and reference data through Admin forms, publishes Organizer inventory, purchases multiple seats from page two, fails/retries/replays payment, refunds once and rebooks for another Customer while comparing rendered statistics with independent SQL aggregates. Only its bootstrap Admin uses a fixture helper. Without an available database they check guest boundaries, foundation availability and generic auth/catalog/inventory 503 responses. Seeded accounts are used for login only. Fixture users have `auth-<UUID>-...@example.test` emails; reference data uses a `Fixture <UUID>` label. An abruptly terminated test may leave owned fixtures or an isolated `p3_admin_<UUID>` schema; inspect exact ownership before manual cleanup.
+The script's `-AuthenticationTests` switch runs the registered JUnit HTTP checks with independent cookie sessions. Authentication checks registration, validation/escaping, three seeded role logins, all nine role-route pairs, negative/stale CSRF, session rotation/replay/logout, inactive/changed accounts, expiry and logout from authenticated POST error pages. Management/catalog checks real rendered forms, reference/account/event CRUD, role/ownership and credential-field tampering, CSRF rejection, public visibility, encoded paging and invalid inputs. Inventory checks rendered generation/pricing/publication forms, immutable setup, ownership/CSRF/tampering, effective public availability and validation/conflict logout. Reservations exercise actual non-first-page forms, corrected resubmission, server-derived fields, owned checkout, negative CSRF, mixed-seat atomicity, real session expiry without renewal, expired takeover and safe normalization/logout. Payment and cancellation use actual rendered forms to verify outcomes, retries/replays, history, full refunds, rebooking, critical duplicate-field rejection and error-page logout. Statistics checks rendered role summaries, scoped zeros, financial reconciliation, query-scope tampering, read-only behavior, safe failures, links and logout. The integrated journey creates accounts and reference data through Admin forms, publishes Organizer inventory, purchases multiple seats from page two, fails/retries/replays payment, refunds once and rebooks for another Customer while comparing rendered statistics with independent SQL aggregates. Only its bootstrap Admin uses a fixture helper. Without an available database they check guest boundaries, foundation availability and generic auth/catalog/inventory 503 responses. Seeded accounts are used for login only. Fixture users have `auth-<UUID>-...@example.test` emails; reference data uses a `Fixture <UUID>` label. An abruptly terminated test may leave owned fixtures or an isolated `p3_admin_<UUID>` schema; inspect exact ownership before manual cleanup.
 
 Surefire reports are in `target/surefire-reports`; Failsafe reports are in `target/failsafe-reports`. Each HTTP invocation replaces its scenario report. Tomcat smoke logs and the captured anonymous response are under `target/tomcat-smoke-*/logs`; auth form bodies, passwords, cookies, and tokens are not written as evidence. `mvn clean` removes `target`, including those artifacts. Stop any manually launched JVM using that directory before cleaning on Windows. A successful build alone does not establish deployment or database correctness.
 

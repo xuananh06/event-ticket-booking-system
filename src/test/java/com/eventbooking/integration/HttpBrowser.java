@@ -45,10 +45,10 @@ final class HttpBrowser {
         return client.send(HttpRequest.newBuilder(base.resolve(path)).timeout(Duration.ofSeconds(20)).header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8").POST(HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
     }
 
-    void login(String email, String password, String destination) throws Exception {
+    void login(String identifier, String password, String destination) throws Exception {
         String token = token(get("login").body());
         loginToken = token;
-        redirect(post("login", fields("_csrf", token, "email", email, "password", password)), destination);
+        redirect(post("login", fields("_csrf", token, "identifier", identifier, "password", password)), destination);
     }
 
     String path(String relative) {

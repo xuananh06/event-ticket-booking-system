@@ -3,7 +3,7 @@ package com.eventbooking.model;
 /**
  * Administrative projection; never selects or holds a password hash.
  */
-public record ManagedUser(long id, String fullName, String email, Role role, boolean active) {
+public record ManagedUser(long id, String fullName, String username, String email, Role role, boolean active) {
     public long getId() {
         return id;
     }
@@ -14,6 +14,10 @@ public record ManagedUser(long id, String fullName, String email, Role role, boo
 
     public String getEmail() {
         return email;
+    }
+
+    public String getUsername() {
+        return username;
     }
 
     public Role getRole() {

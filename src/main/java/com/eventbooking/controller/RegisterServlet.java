@@ -35,7 +35,7 @@ public final class RegisterServlet extends HttpServlet {
             return;
         }
         try {
-            auth.register(request.getParameter("fullName"), request.getParameter("email"),
+            auth.register(request.getParameter("fullName"), request.getParameter("username"), request.getParameter("email"),
                     request.getParameter("password"), request.getParameter("confirmation"));
             request.getSession().setAttribute("registrationSuccess", Boolean.TRUE);
             Web.redirect(request, response, "/login");
@@ -44,6 +44,7 @@ public final class RegisterServlet extends HttpServlet {
             request.setAttribute("pageTitle", "Create your account");
             request.setAttribute("errors", invalid.getErrors());
             request.setAttribute("fullName", Web.safeInput(request.getParameter("fullName"), 150));
+            request.setAttribute("username", Web.safeInput(request.getParameter("username"), 64));
             request.setAttribute("email", Web.safeInput(request.getParameter("email"), 254));
             Web.view(request, response, "auth/register");
         } catch (ServiceUnavailableException unavailable) {

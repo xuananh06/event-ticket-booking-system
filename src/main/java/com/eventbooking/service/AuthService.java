@@ -3,13 +3,11 @@ package com.eventbooking.service;
 import com.eventbooking.dao.UserDao;
 import com.eventbooking.exception.InvalidCredentialsException;
 import com.eventbooking.exception.ServiceUnavailableException;
-import com.eventbooking.exception.ValidationException;
 import com.eventbooking.model.UserAccount;
 import com.eventbooking.model.UserProfile;
 import com.eventbooking.security.PasswordHasher;
 
 import java.sql.SQLException;
-import java.util.Map;
 import java.util.Optional;
 
 public final class AuthService {
@@ -27,26 +25,23 @@ public final class AuthService {
         return AccountValidation.normalize(email);
     }
 
-    public long register(String fullName, String email, String password, String confirmation) {
-        AccountValidation.Fields fields = AccountValidation.registration(fullName, email, password, confirmation, passwords);
+    public long register(String fullName, String username, String email, String password, String confirmation) {
+        AccountValidation.Fields fields = AccountValidation.registration(fullName, username, email, password, confirmation, passwords);
         String hash = passwords.hash(password);
         try {
-            // No SELECT-before-INSERT race; SQL Server's unique email key is authoritative.
-            return users.createCustomer(fields.name(), fields.email(), hash);
+            // SQL Server's unique username index and email key are authoritative, including races.
+            return users.createCustomer(fields.name(), fields.username(), fields.email(), hash);
         } catch (SQLException error) {
-            if (error.getErrorCode() == 2601 || error.getErrorCode() == 2627) {
-                throw new ValidationException(Map.of("email", "This email address is already registered."));
-            }
-            throw new ServiceUnavailableException();
+            throw AccountConflicts.failure(error);
         } catch (UnsatisfiedLinkError unavailableNativeLibrary) {
             throw new ServiceUnavailableException();
         }
     }
 
-    public UserProfile authenticate(String email, String password) {
-        String normalizedEmail = AccountValidation.credentials(email, password, passwords);
+    public UserProfile authenticate(String identifier, String password) {
+        String normalized = AccountValidation.credentials(identifier, password, passwords);
         try {
-            Optional<UserAccount> account = users.findByEmail(normalizedEmail);
+            Optional<UserAccount> account = normalized.contains("@") ? users.findByEmail(normalized) : users.findByUsername(normalized);
             boolean matches = passwords.matches(password, account.map(UserAccount::getPasswordHash).orElse(DUMMY_HASH));
             if (account.isEmpty() || !matches || !account.orElseThrow().isActive()) {
                 throw new InvalidCredentialsException();

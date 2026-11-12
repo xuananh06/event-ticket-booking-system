@@ -26,6 +26,10 @@ public class UserDao {
         return find("SELECT id,email,full_name,role,is_active,password_hash FROM dbo.users WHERE email=?", email, true);
     }
 
+    public Optional<UserAccount> findByUsername(String username) throws SQLException {
+        return find("SELECT id,email,full_name,role,is_active,password_hash FROM dbo.users WHERE username=?", username, true);
+    }
+
     public Optional<UserAccount> findById(long id) throws SQLException {
         // Protected requests do not need to read the password hash.
         return find("SELECT id,email,full_name,role,is_active FROM dbo.users WHERE id=?", id, false);
@@ -55,13 +59,14 @@ public class UserDao {
         }
     }
 
-    public long createCustomer(String fullName, String email, String passwordHash) throws SQLException {
-        String sql = "INSERT dbo.users(full_name,email,password_hash,role,is_active) OUTPUT INSERTED.id VALUES (?,?,?,'CUSTOMER',1)";
+    public long createCustomer(String fullName, String username, String email, String passwordHash) throws SQLException {
+        String sql = "INSERT dbo.users(full_name,username,email,password_hash,role,is_active) OUTPUT INSERTED.id VALUES (?,?,?,?,'CUSTOMER',1)";
         try (Connection connection = connect(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setQueryTimeout(5);
             statement.setNString(1, fullName);
-            statement.setNString(2, email);
-            statement.setString(3, passwordHash);
+            statement.setNString(2, username);
+            statement.setNString(3, email);
+            statement.setString(4, passwordHash);
             try (ResultSet rows = statement.executeQuery()) {
                 if (!rows.next()) {
                     throw new SQLException("Account creation did not return an identifier.");

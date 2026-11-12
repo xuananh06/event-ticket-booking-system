@@ -10,7 +10,7 @@ import static com.eventbooking.dao.JdbcAccess.*;
 
 public final class AdminUserDao {
     public ManagedUser find(Connection c, long id) throws SQLException {
-        try (PreparedStatement s = statement(c, "SELECT id,full_name,email,role,is_active FROM dbo.users WITH (UPDLOCK,HOLDLOCK) WHERE id=?", id); ResultSet r = s.executeQuery()) {
+        try (PreparedStatement s = statement(c, "SELECT id,full_name,username,email,role,is_active FROM dbo.users WITH (UPDLOCK,HOLDLOCK) WHERE id=?", id); ResultSet r = s.executeQuery()) {
             if (!r.next()) {
                 throw DomainException.missing();
             }
@@ -19,9 +19,9 @@ public final class AdminUserDao {
     }
 
     public Page<ManagedUser> list(Connection c, String search, Boolean active, int page, int size) throws SQLException {
-        String where = " WHERE (full_name LIKE ? ESCAPE '~' OR email LIKE ? ESCAPE '~')";
+        String where = " WHERE (full_name LIKE ? ESCAPE '~' OR email LIKE ? ESCAPE '~' OR username LIKE ? ESCAPE '~')";
         String pattern = literal(search);
-        List<Object> values = new ArrayList<>(List.of(pattern, pattern));
+        List<Object> values = new ArrayList<>(List.of(pattern, pattern, pattern));
         if (active != null) {
             where += " AND is_active=?";
             values.add(active);
@@ -30,7 +30,7 @@ public final class AdminUserDao {
         values.add(Page.offset(page, size));
         values.add(size);
         List<ManagedUser> rows = new ArrayList<>();
-        try (PreparedStatement s = statement(c, "SELECT id,full_name,email,role,is_active FROM dbo.users" + where + " ORDER BY id OFFSET ? ROWS FETCH NEXT ? ROWS ONLY", values.toArray()); ResultSet r = s.executeQuery()) {
+        try (PreparedStatement s = statement(c, "SELECT id,full_name,username,email,role,is_active FROM dbo.users" + where + " ORDER BY id OFFSET ? ROWS FETCH NEXT ? ROWS ONLY", values.toArray()); ResultSet r = s.executeQuery()) {
             while (r.next()) {
                 rows.add(map(r));
             }
@@ -42,12 +42,12 @@ public final class AdminUserDao {
         return "%" + text.replace("~", "~~").replace("%", "~%").replace("_", "~_").replace("[", "~[") + "%";
     }
 
-    public long create(Connection c, String name, String email, String hash, Role role, boolean active) throws SQLException {
-        return scalar(c, "INSERT dbo.users(full_name,email,password_hash,role,is_active) OUTPUT INSERTED.id VALUES (?,?,?,?,?)", name, email, hash, role.name(), active);
+    public long create(Connection c, String name, String username, String email, String hash, Role role, boolean active) throws SQLException {
+        return scalar(c, "INSERT dbo.users(full_name,username,email,password_hash,role,is_active) OUTPUT INSERTED.id VALUES (?,?,?,?,?,?)", name, username, email, hash, role.name(), active);
     }
 
-    public void save(Connection c, long id, String name, String email, Role role, boolean active) throws SQLException {
-        update(c, "UPDATE dbo.users SET full_name=?,email=?,role=?,is_active=? WHERE id=?", name, email, role.name(), active, id);
+    public void save(Connection c, long id, String name, String username, String email, Role role, boolean active) throws SQLException {
+        update(c, "UPDATE dbo.users SET full_name=?,username=?,email=?,role=?,is_active=? WHERE id=?", name, username, email, role.name(), active, id);
     }
 
     public long activeAdmins(Connection c) throws SQLException {
@@ -67,6 +67,6 @@ public final class AdminUserDao {
     }
 
     private ManagedUser map(ResultSet r) throws SQLException {
-        return new ManagedUser(r.getLong("id"), r.getNString("full_name"), r.getNString("email"), Role.valueOf(r.getString("role")), r.getBoolean("is_active"));
+        return new ManagedUser(r.getLong("id"), r.getNString("full_name"), r.getNString("username"), r.getNString("email"), Role.valueOf(r.getString("role")), r.getBoolean("is_active"));
     }
 }

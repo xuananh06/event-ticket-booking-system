@@ -11,23 +11,23 @@
             <section class="auth-card mx-auto">
                 <p class="eyebrow">GOOD TO SEE YOU AGAIN</p>
                 <h1 class="h2 fw-bold">Welcome back</h1>
-                <p class="text-secondary mb-4">Sign in to your Campus Events account.</p>
+                <p class="text-secondary mb-4">Sign in to view your bookings or access your management tools.</p>
                 <%@ include file="../common/messages.jspf" %>
                 <form method="post" action="<c:out value='${loginUrl}'/>">
                     <input type="hidden" name="_csrf" value="<c:out value='${csrfToken}'/>">
                     <div class="mb-3">
-                        <label class="form-label" for="email">Email address</label>
+                        <label class="form-label" for="identifier">Email or username</label>
                         <input
                             class="form-control"
-                            id="email" aria-invalid="${not empty errors.email}"
-                            name="email"
-                            type="email"
+                            id="identifier" aria-invalid="${not empty errors.identifier}"
+                            name="identifier"
+                            type="text"
                             autocomplete="username"
                             maxlength="254"
                             required
-                            value="<c:out value='${email}'/>"
-                            aria-describedby="email-error">
-                        <div id="email-error" class="field-error"><c:out value="${errors.email}"/></div>
+                            value="<c:out value='${identifier}'/>"
+                            aria-describedby="identifier-error">
+                        <div id="identifier-error" class="field-error"><c:out value="${errors.identifier}"/></div>
                     </div>
                     <div class="mb-4">
                         <label class="form-label" for="password">Password</label>
